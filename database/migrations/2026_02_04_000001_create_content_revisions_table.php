@@ -1,0 +1,27 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('content_revisions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('content_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->json('snapshot'); // Full content + blocks structure
+            $table->string('label')->nullable(); // e.g. "Before publish", "Restored from v3"
+            $table->timestamps();
+
+            $table->index(['content_id', 'created_at']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('content_revisions');
+    }
+};

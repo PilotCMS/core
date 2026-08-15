@@ -1,0 +1,31 @@
+{
+    "$schema": "https://getcomposer.org/schema.json",
+    "name": "pilotcms/core",
+    "description": "The versioned CMS engine for Pilot.",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": "^8.4.1",
+        "illuminate/console": "^12.0",
+        "illuminate/database": "^12.0",
+        "illuminate/support": "^12.0",
+        "pilot/laravel": "dev-main",
+        "spatie/laravel-permission": "^6.24",
+        "symfony/process": "^7.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "Pilot\\Core\\": "src/",
+            "Pilot\\Core\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Pilot\\Core\\PilotCoreServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
