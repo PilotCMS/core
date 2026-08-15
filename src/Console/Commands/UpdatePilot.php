@@ -23,11 +23,11 @@ class UpdatePilot extends Command
         }
 
         if ($this->option('dry-run')) {
-            return $this->runStep(['composer', 'outdated', 'pilotcms/core', '--direct'], 'Checking Pilot Core');
+            return $this->runStep([PHP_BINARY, $this->composerBinary(), 'outdated', 'pilotcms/core', '--direct'], 'Checking Pilot Core');
         }
 
         if ($this->runStep([
-            'composer', 'update', 'pilotcms/core', '--with-all-dependencies', '--no-interaction',
+            PHP_BINARY, $this->composerBinary(), 'update', 'pilotcms/core', '--with-all-dependencies', '--no-interaction',
         ], 'Updating Pilot Core') !== self::SUCCESS) {
             return self::FAILURE;
         }
@@ -60,9 +60,25 @@ class UpdatePilot extends Command
         return $process->isSuccessful() && trim($process->getOutput()) !== '';
     }
 
+    private function composerBinary(): string
+    {
+        $process = Process::fromShellCommandline('command -v composer', base_path());
+        $process->run();
+
+        $binary = trim($process->getOutput());
+
+        if (! $process->isSuccessful() || $binary === '') {
+            throw new \RuntimeException('Composer is not available on PATH.');
+        }
+
+        return $binary;
+    }
+
     /** @param list<string> $command */
     private function runStep(array $command, string $label): int
     {
+        $successful = false;
+
         $this->components->task($label, function () use ($command, &$successful): void {
             $process = new Process($command, base_path(), timeout: null);
             $process->setTty(Process::isTtySupported());
