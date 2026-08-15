@@ -32,6 +32,19 @@ class PilotCoreServiceProvider extends ServiceProvider
             return 'Database\\Factories\\'.$relativeName.'Factory';
         });
 
+        Factory::guessModelNamesUsing(function (Factory $factory): string {
+            $model = Str::replaceLast('Factory', '', class_basename($factory));
+            $coreModel = 'Pilot\\Core\\Models\\'.$model;
+
+            if (class_exists($coreModel)) {
+                return $coreModel;
+            }
+
+            $appModel = $this->app->getNamespace().'Models\\'.$model;
+
+            return class_exists($appModel) ? $appModel : $this->app->getNamespace().$model;
+        });
+
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
 
         if ($this->app->runningInConsole()) {
