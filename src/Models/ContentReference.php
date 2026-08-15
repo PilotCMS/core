@@ -2,13 +2,14 @@
 
 namespace Pilot\Core\Models;
 
+use Database\Factories\ContentReferenceFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ContentReference extends Model
 {
-    /** @use HasFactory<\Database\Factories\ContentReferenceFactory> */
+    /** @use HasFactory<ContentReferenceFactory> */
     use HasFactory;
 
     protected $fillable = [

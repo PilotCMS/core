@@ -2,9 +2,9 @@
 
 namespace Pilot\Core\Support\Cms;
 
-use Pilot\Core\Models\Asset;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Pilot\Core\Models\Asset;
 use Throwable;
 
 class AssetThumbnailer

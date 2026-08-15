@@ -2,9 +2,9 @@
 
 namespace Pilot\Core\Console\Commands;
 
+use Illuminate\Console\Command;
 use Pilot\Core\Models\Asset;
 use Pilot\Core\Support\Cms\AssetThumbnailer;
-use Illuminate\Console\Command;
 
 class GenerateAssetThumbnails extends Command
 {

@@ -2,10 +2,10 @@
 
 namespace Pilot\Core\Support\Cms;
 
+use Illuminate\Support\Collection;
 use Pilot\Core\Models\Asset;
 use Pilot\Core\Models\Block;
 use Pilot\Core\Models\Content;
-use Illuminate\Support\Collection;
 
 class AssetUsageFinder
 {

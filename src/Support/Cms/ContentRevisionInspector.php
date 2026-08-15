@@ -2,10 +2,10 @@
 
 namespace Pilot\Core\Support\Cms;
 
-use Pilot\Core\Models\Content;
-use Pilot\Core\Models\ContentRevision;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Pilot\Core\Models\Content;
+use Pilot\Core\Models\ContentRevision;
 
 class ContentRevisionInspector
 {

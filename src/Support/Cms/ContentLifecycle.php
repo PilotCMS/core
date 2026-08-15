@@ -2,14 +2,14 @@
 
 namespace Pilot\Core\Support\Cms;
 
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Pilot\Core\Models\Block;
 use Pilot\Core\Models\BlockType;
 use Pilot\Core\Models\Content;
 use Pilot\Core\Models\ContentReference;
 use Pilot\Core\Models\ContentRevision;
 use Pilot\Core\Models\Redirect;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\DB;
 
 class ContentLifecycle
 {

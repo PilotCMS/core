@@ -2,6 +2,8 @@
 
 namespace Pilot\Core\Database\Seeders;
 
+use App\Models\User;
+use Illuminate\Database\Seeder;
 use Pilot\Core\Models\Asset;
 use Pilot\Core\Models\AssetFolder;
 use Pilot\Core\Models\Block;
@@ -10,8 +12,6 @@ use Pilot\Core\Models\Datasource;
 use Pilot\Core\Models\DatasourceEntry;
 use Pilot\Core\Models\Locale;
 use Pilot\Core\Models\Space;
-use App\Models\User;
-use Illuminate\Database\Seeder;
 
 class SpaceSeeder extends Seeder
 {

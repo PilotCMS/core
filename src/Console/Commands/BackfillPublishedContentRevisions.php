@@ -2,9 +2,9 @@
 
 namespace Pilot\Core\Console\Commands;
 
+use Illuminate\Console\Command;
 use Pilot\Core\Models\Content;
 use Pilot\Core\Support\Cms\ContentLifecycle;
-use Illuminate\Console\Command;
 
 class BackfillPublishedContentRevisions extends Command
 {

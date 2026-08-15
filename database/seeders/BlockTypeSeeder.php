@@ -2,8 +2,8 @@
 
 namespace Pilot\Core\Database\Seeders;
 
-use Pilot\Core\Models\BlockType;
 use Illuminate\Database\Seeder;
+use Pilot\Core\Models\BlockType;
 
 class BlockTypeSeeder extends Seeder
 {

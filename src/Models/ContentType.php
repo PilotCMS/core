@@ -2,13 +2,14 @@
 
 namespace Pilot\Core\Models;
 
+use Database\Factories\ContentTypeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ContentType extends Model
 {
-    /** @use HasFactory<\Database\Factories\ContentTypeFactory> */
+    /** @use HasFactory<ContentTypeFactory> */
     use HasFactory;
 
     protected $fillable = [
