@@ -47,7 +47,7 @@
                                     <span class="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Up to date</span>
                                 @endif
                             </div>
-                            <flux:text class="mt-1 text-sm text-slate-500">Core updates include the versioned admin application, migrations, and frontend assets.</flux:text>
+                            <flux:text class="mt-1 text-sm text-slate-500">Core updates include the versioned admin application, migrations, and frontend assets. Pilot backs up Composer and the database, verifies the result, and rolls back failures automatically.</flux:text>
                         </div>
 
                         <div class="cms-actions shrink-0">
@@ -60,7 +60,7 @@
                                 <button
                                     type="button"
                                     wire:click="startPilotUpdate"
-                                    wire:confirm="Update Pilot to {{ $pilotVersion['latest'] }}? Dependencies, migrations, and production assets will be updated."
+                                    wire:confirm="Update Pilot to {{ $pilotVersion['latest'] }}? Pilot will create a rollback backup, enter maintenance mode, update dependencies and the database, rebuild assets, and run health checks."
                                     class="cms-btn cms-btn-primary"
                                     wire:loading.attr="disabled"
                                     wire:target="startPilotUpdate"
@@ -116,6 +116,27 @@
                                         <span class="size-4 animate-spin rounded-full border-2 border-sky-600 border-t-transparent" aria-label="Update in progress"></span>
                                     @endif
                                 </div>
+
+                                @if(!empty($pilotUpdate['checks']))
+                                    <div class="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                                        <p class="font-semibold">Safety checks</p>
+                                        <ul class="mt-2 list-disc space-y-1 pl-5">
+                                            @foreach($pilotUpdate['checks'] as $check)
+                                                <li>{{ $check }}</li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                @endif
+
+                                @if(!empty($pilotUpdate['backup']['created_at']))
+                                    <p class="mt-3 text-xs text-slate-500">Rollback backup created {{ \Illuminate\Support\Carbon::parse($pilotUpdate['backup']['created_at'])->diffForHumans() }}.</p>
+                                @endif
+
+                                @if(!empty($pilotUpdate['rollback']['message']))
+                                    <div class="mt-4 rounded-lg border px-4 py-3 text-sm {{ ($pilotUpdate['rollback']['succeeded'] ?? false) ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-red-200 bg-red-50 text-red-800' }}">
+                                        {{ $pilotUpdate['rollback']['message'] }}
+                                    </div>
+                                @endif
 
                                 @if($pilotUpdateLog !== '')
                                     <details class="mt-4" @if(($pilotUpdate['status'] ?? null) === 'failed') open @endif>
