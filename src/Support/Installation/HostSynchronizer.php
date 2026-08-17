@@ -38,6 +38,18 @@ class HostSynchronizer
         );
 
         $this->replace(
+            $basePath.'/routes/console.php',
+            [
+                "use Illuminate\\Support\\Facades\\Schedule;\n",
+                "use Illuminate\\Support\\Facades\\Schedule;\r\n",
+                "Schedule::command('pilot:publish-scheduled')->everyMinute();\n",
+                "Schedule::command('pilot:publish-scheduled')->everyMinute();\r\n",
+            ],
+            '',
+            $changes,
+        );
+
+        $this->replace(
             $basePath.'/routes/web.php',
             [
                 "require __DIR__.'/settings.php';\n",
