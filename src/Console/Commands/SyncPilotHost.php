@@ -4,6 +4,7 @@ namespace Pilot\Core\Console\Commands;
 
 use Illuminate\Console\Command;
 use Pilot\Core\Support\Installation\HostSynchronizer;
+use Symfony\Component\Process\Process;
 
 class SyncPilotHost extends Command
 {
@@ -23,6 +24,15 @@ class SyncPilotHost extends Command
 
         foreach ($changes as $path) {
             $this->components->twoColumnDetail($path, '<fg=green>UPDATED</>');
+        }
+
+        if (in_array('composer.json', $changes, true)) {
+            $process = new Process(['composer', 'dump-autoload', '--no-interaction'], base_path(), timeout: null);
+            $process->run(fn (string $type, string $output) => $this->output->write($output));
+
+            if (! $process->isSuccessful()) {
+                return self::FAILURE;
+            }
         }
 
         return self::SUCCESS;

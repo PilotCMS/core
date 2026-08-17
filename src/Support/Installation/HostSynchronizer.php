@@ -13,6 +13,8 @@ class HostSynchronizer
     {
         $changes = [];
 
+        $this->removeTweakerAutoload($basePath.'/composer.json', $changes);
+
         $this->replace(
             $basePath.'/bootstrap/app.php',
             [
@@ -141,6 +143,28 @@ class HostSynchronizer
         );
 
         return $changes;
+    }
+
+    /** @param list<string> $changes */
+    protected function removeTweakerAutoload(string $path, array &$changes): void
+    {
+        if (! $this->files->exists($path)) {
+            return;
+        }
+
+        $composer = json_decode($this->files->get($path), true, flags: JSON_THROW_ON_ERROR);
+
+        if (! isset($composer['autoload']['psr-4']['Tweaker\\'])) {
+            return;
+        }
+
+        unset($composer['autoload']['psr-4']['Tweaker\\']);
+
+        $this->files->put(
+            $path,
+            json_encode($composer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR).PHP_EOL,
+        );
+        $changes[] = $this->relativePath($path);
     }
 
     /** @param list<string> $needles @param list<string> $changes */
