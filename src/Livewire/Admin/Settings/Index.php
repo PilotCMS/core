@@ -7,6 +7,9 @@ use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Pilot\Core\Models\CmsSetting;
 use Pilot\Core\Models\Space;
+use Pilot\Core\Support\Updates\PilotUpdateChecker;
+use Pilot\Core\Support\Updates\PilotUpdateManager;
+use RuntimeException;
 
 class Index extends Component
 {
@@ -22,7 +25,15 @@ class Index extends Component
 
     public int $previewExpirationMinutes = 60;
 
-    public function mount(): void
+    /** @var array<string, mixed> */
+    public array $pilotVersion = [];
+
+    /** @var array<string, mixed> */
+    public array $pilotUpdate = [];
+
+    public string $pilotUpdateLog = '';
+
+    public function mount(PilotUpdateChecker $checker, PilotUpdateManager $manager): void
     {
         $this->defaultSpace = CmsSetting::get('default_space', config('cms.default_space', '')) ?? '';
         $this->homeSlug = CmsSetting::get('home_slug', config('cms.home_slug', 'home'));
@@ -30,6 +41,41 @@ class Index extends Component
         $this->draftApiEnabled = (bool) CmsSetting::get('draft_api_enabled', true);
         $this->previewLinksEnabled = (bool) CmsSetting::get('preview_links_enabled', true);
         $this->previewExpirationMinutes = (int) CmsSetting::get('preview_expiration_minutes', 60);
+        $this->pilotVersion = $checker->status();
+        $this->pilotUpdate = $manager->status();
+        $this->pilotUpdateLog = $manager->log();
+    }
+
+    public function checkForPilotUpdates(PilotUpdateChecker $checker): void
+    {
+        $this->authorizeSettingsManagement();
+        $this->pilotVersion = $checker->status(true);
+    }
+
+    public function startPilotUpdate(PilotUpdateManager $manager): void
+    {
+        $this->authorizeSettingsManagement();
+        $this->resetErrorBag('pilotUpdate');
+
+        try {
+            $this->pilotUpdate = $manager->start(
+                (string) ($this->pilotVersion['latest'] ?? ''),
+                auth()->id(),
+            );
+        } catch (RuntimeException $exception) {
+            $this->addError('pilotUpdate', $exception->getMessage());
+        }
+    }
+
+    public function refreshPilotUpdateStatus(PilotUpdateChecker $checker, PilotUpdateManager $manager): void
+    {
+        $previousStatus = $this->pilotUpdate['status'] ?? null;
+        $this->pilotUpdate = $manager->status();
+        $this->pilotUpdateLog = $manager->log();
+
+        if ($previousStatus !== 'succeeded' && ($this->pilotUpdate['status'] ?? null) === 'succeeded') {
+            $this->pilotVersion = $checker->status(true);
+        }
     }
 
     public function save(): void

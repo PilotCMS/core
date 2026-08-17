@@ -10,6 +10,7 @@ class UpdatePilot extends Command
     protected $signature = 'pilot:update
         {--dry-run : Show whether an update is available without changing files}
         {--no-build : Skip the frontend production build}
+        {--target= : Update to the release line containing this version}
         {--force : Continue when composer.json or composer.lock has uncommitted changes}';
 
     protected $description = 'Update Pilot Core and run its post-update steps';
@@ -26,9 +27,9 @@ class UpdatePilot extends Command
             return $this->runStep([PHP_BINARY, $this->composerBinary(), 'outdated', 'pilotcms/core', '--direct'], 'Checking Pilot Core');
         }
 
-        if ($this->runStep([
-            PHP_BINARY, $this->composerBinary(), 'update', 'pilotcms/core', '--with-all-dependencies', '--no-interaction',
-        ], 'Updating Pilot Core') !== self::SUCCESS) {
+        $composerCommand = $this->composerUpdateCommand();
+
+        if ($this->runStep($composerCommand, 'Updating Pilot Core') !== self::SUCCESS) {
             return self::FAILURE;
         }
 
@@ -43,6 +44,28 @@ class UpdatePilot extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /** @return list<string> */
+    private function composerUpdateCommand(): array
+    {
+        $command = [PHP_BINARY, $this->composerBinary()];
+        $target = $this->option('target');
+
+        if (is_string($target) && $target !== '') {
+            $version = ltrim($target, 'v');
+
+            if (! preg_match('/^\d+\.\d+\.\d+$/', $version)) {
+                throw new \InvalidArgumentException('The target must be a stable semantic version, such as v0.3.0.');
+            }
+
+            [$major, $minor] = array_map('intval', explode('.', $version));
+            $constraint = $major === 0 ? "^0.{$minor}" : "^{$major}.{$minor}";
+
+            return [...$command, 'require', "pilotcms/core:{$constraint}", '--with-all-dependencies', '--no-interaction'];
+        }
+
+        return [...$command, 'update', 'pilotcms/core', '--with-all-dependencies', '--no-interaction'];
     }
 
     private function composerFilesAreDirty(): bool

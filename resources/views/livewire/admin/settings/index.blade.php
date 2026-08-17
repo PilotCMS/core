@@ -1,5 +1,5 @@
 <div class="cms-drawer-page flex min-h-0 w-full min-w-0 flex-1 flex-col bg-gray-50">
-    <x-jaunt.shell.dynamic-header title="CMS Settings" subtitle="Configure public rendering, API access, and preview behavior." top="0px" as="header" scroll-target="#cms-settings-scroll" aria-label="Page header">
+    <x-jaunt.shell.dynamic-header title="CMS Settings" subtitle="Configure Pilot, review updates, and control public delivery." top="0px" as="header" scroll-target="#cms-settings-scroll" aria-label="Page header">
         <x-slot:actions>
         <div class="cms-actions pb-0.5">
             <button type="button" wire:click="resetToEnvironmentDefaults" wire:confirm="Reset CMS settings to environment defaults?" class="cms-btn cms-btn-secondary">
@@ -25,6 +25,106 @@
                     <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                         <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Preview lifetime</p>
                         <p class="mt-2 text-xl font-bold text-slate-900">{{ $previewExpirationMinutes }} minutes</p>
+                    </div>
+
+                    <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                        <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Pilot Core</p>
+                        <p class="mt-2 text-xl font-bold text-slate-900">{{ $pilotVersion['installed'] ?? 'Unknown' }}</p>
+                    </div>
+                </section>
+
+                <section
+                    class="rounded-lg border border-slate-200 bg-white shadow-sm"
+                    @if(in_array($pilotUpdate['status'] ?? null, ['queued', 'running'], true)) wire:poll.3s="refreshPilotUpdateStatus" @endif
+                >
+                    <div class="flex flex-col gap-4 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <flux:heading size="md">Pilot updates</flux:heading>
+                                @if(($pilotVersion['update_available'] ?? false) === true)
+                                    <span class="rounded-full bg-sky-100 px-2 py-1 text-xs font-semibold text-sky-700">Update available</span>
+                                @elseif(($pilotVersion['error'] ?? null) === null)
+                                    <span class="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Up to date</span>
+                                @endif
+                            </div>
+                            <flux:text class="mt-1 text-sm text-slate-500">Core updates include the versioned admin application, migrations, and frontend assets.</flux:text>
+                        </div>
+
+                        <div class="cms-actions shrink-0">
+                            <button type="button" wire:click="checkForPilotUpdates" class="cms-btn cms-btn-secondary" wire:loading.attr="disabled" wire:target="checkForPilotUpdates">
+                                <span wire:loading.remove wire:target="checkForPilotUpdates">Check again</span>
+                                <span wire:loading wire:target="checkForPilotUpdates">Checking…</span>
+                            </button>
+
+                            @if(($pilotVersion['update_available'] ?? false) === true && config('cms.updates.self_update', false))
+                                <button
+                                    type="button"
+                                    wire:click="startPilotUpdate"
+                                    wire:confirm="Update Pilot to {{ $pilotVersion['latest'] }}? Dependencies, migrations, and production assets will be updated."
+                                    class="cms-btn cms-btn-primary"
+                                    wire:loading.attr="disabled"
+                                    wire:target="startPilotUpdate"
+                                    @disabled(in_array($pilotUpdate['status'] ?? null, ['queued', 'running'], true))
+                                >
+                                    <span wire:loading.remove wire:target="startPilotUpdate">Update to {{ $pilotVersion['latest'] }}</span>
+                                    <span wire:loading wire:target="startPilotUpdate">Starting…</span>
+                                </button>
+                            @endif
+                        </div>
+                    </div>
+
+                    <div class="space-y-4 p-5">
+                        <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+                            <div class="rounded-lg bg-slate-50 px-3 py-3">
+                                <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Installed</dt>
+                                <dd class="mt-1 font-mono font-semibold text-slate-900">{{ $pilotVersion['installed'] ?? 'Unknown' }}</dd>
+                            </div>
+                            <div class="rounded-lg bg-slate-50 px-3 py-3">
+                                <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Latest</dt>
+                                <dd class="mt-1 font-mono font-semibold text-slate-900">{{ $pilotVersion['latest'] ?? 'Unavailable' }}</dd>
+                            </div>
+                            <div class="rounded-lg bg-slate-50 px-3 py-3">
+                                <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">One-click updates</dt>
+                                <dd class="mt-1 font-semibold text-slate-900">{{ config('cms.updates.self_update', false) ? 'Enabled' : 'Disabled' }}</dd>
+                            </div>
+                        </dl>
+
+                        @if($pilotVersion['error'] ?? null)
+                            <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                                Pilot could not check for updates: {{ $pilotVersion['error'] }}
+                            </div>
+                        @endif
+
+                        @if(($pilotVersion['update_available'] ?? false) === true && ! config('cms.updates.self_update', false))
+                            <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                                One-click updates are disabled in this environment. Run <code class="font-mono font-semibold">pilot update</code>, or set <code class="font-mono font-semibold">PILOT_SELF_UPDATE=true</code> to enable them.
+                            </div>
+                        @endif
+
+                        @error('pilotUpdate')
+                            <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ $message }}</div>
+                        @enderror
+
+                        @if(in_array($pilotUpdate['status'] ?? null, ['queued', 'running', 'succeeded', 'failed'], true))
+                            <div class="rounded-lg border border-slate-200 p-4">
+                                <div class="flex items-center justify-between gap-4">
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-900">{{ ucfirst($pilotUpdate['status']) }}</p>
+                                        <p class="mt-1 text-sm text-slate-500">{{ $pilotUpdate['message'] ?? '' }}</p>
+                                    </div>
+                                    @if(in_array($pilotUpdate['status'], ['queued', 'running'], true))
+                                        <span class="size-4 animate-spin rounded-full border-2 border-sky-600 border-t-transparent" aria-label="Update in progress"></span>
+                                    @endif
+                                </div>
+
+                                @if($pilotUpdateLog !== '')
+                                    <details class="mt-4" @if(($pilotUpdate['status'] ?? null) === 'failed') open @endif>
+                                        <summary class="cursor-pointer text-sm font-semibold text-slate-700">Update log</summary>
+                                        <pre class="mt-3 max-h-72 overflow-auto rounded-lg bg-slate-950 p-4 text-xs leading-5 text-slate-100">{{ $pilotUpdateLog }}</pre>
+                                    </details>
+                                @endif
+                            </div>
+                        @endif
                     </div>
                 </section>
 

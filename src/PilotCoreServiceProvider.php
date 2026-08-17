@@ -20,6 +20,7 @@ use Pilot\Core\Console\Commands\FinalizePilotUpdate;
 use Pilot\Core\Console\Commands\GenerateAssetThumbnails;
 use Pilot\Core\Console\Commands\InstallPilot;
 use Pilot\Core\Console\Commands\PublishScheduledContent;
+use Pilot\Core\Console\Commands\RunPilotUpdateInBackground;
 use Pilot\Core\Console\Commands\SyncPilotHost;
 use Pilot\Core\Console\Commands\UpdatePilot;
 use Pilot\Core\Livewire\Admin\Assets\AssetPickerModal;
@@ -147,6 +148,7 @@ class PilotCoreServiceProvider extends ServiceProvider
                 GenerateAssetThumbnails::class,
                 InstallPilot::class,
                 PublishScheduledContent::class,
+                RunPilotUpdateInBackground::class,
                 SyncPilotHost::class,
                 UpdatePilot::class,
             ]);
