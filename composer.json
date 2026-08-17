@@ -1,16 +1,28 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
     "name": "pilotcms/core",
-    "description": "The versioned CMS engine for Pilot.",
+    "description": "The complete versioned CMS application for Pilot.",
     "type": "library",
     "license": "MIT",
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/PilotCMS/pilot-laravel.git"
+        }
+    ],
     "require": {
         "php": "^8.4.1",
         "illuminate/console": "^12.0",
         "illuminate/database": "^12.0",
+        "illuminate/http": "^12.0",
+        "illuminate/routing": "^12.0",
         "illuminate/support": "^12.0",
+        "illuminate/view": "^12.0",
+        "laravel/fortify": "^1.30",
+        "livewire/flux": "^2.9.0",
+        "livewire/livewire": "^4.0",
         "nuwave/lighthouse": "^6.64",
-        "pilot/laravel": "dev-main",
+        "pilot/laravel": "^0.1",
         "spatie/laravel-permission": "^6.24",
         "symfony/process": "^7.2"
     },

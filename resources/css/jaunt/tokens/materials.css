@@ -1,0 +1,130 @@
+/* ==========================================================================
+   Jaunt — Materials (macOS vibrancy)
+   --------------------------------------------------------------------------
+   macOS builds depth out of TRANSLUCENCY, not shadow: chrome is a thin sheet
+   of frosted glass that samples the colour behind it, edged with a 1px
+   specular highlight.
+
+   Rules
+     • Materials go on CHROME and TEMPORARY surfaces only — never on cards,
+       tables, or anything holding data. Content sits on opaque surfaces.
+     • Always pair a material with its `-bg` tint; backdrop-filter alone has
+       no contrast floor and text fails against light content.
+     • Every material gets `--material-edge` as an inset top highlight. That
+       hairline is what reads as "glass" rather than "transparent div".
+     • Scroll boundaries get a HARD EDGE, not a fade. A chrome bar with a
+       hairline underneath states plainly where chrome stops and content
+       begins; a soft ramp only makes a complete list look truncated.
+     • Respect prefers-reduced-transparency — fallbacks are wired below.
+   ========================================================================== */
+
+:root {
+  /* ---- Blur recipes — saturation boost is what makes it feel macOS ------ */
+  /* One saturation value for every tier. Blur washes colour out; this puts it
+     back. Raise it for more vibrancy — it does not affect flatness. */
+  --material-sat: 190%; /* @kind other */
+  --material-ultrathin-filter: blur(10px) saturate(var(--material-sat)); /* @kind other */
+  --material-thin-filter:      blur(22px) saturate(var(--material-sat)); /* @kind other */
+  --material-regular-filter:   blur(34px) saturate(var(--material-sat)); /* @kind other */
+  --material-thick-filter:     blur(50px) saturate(var(--material-sat)); /* @kind other */
+  --material-chrome-filter:    blur(26px) saturate(var(--material-sat)); /* @kind other */
+}
+
+/* Light — sheets brighten what's behind them */
+:root,
+[data-theme="light"] {
+  --material-ultrathin-bg: rgba(255, 255, 255, 0.55);
+  --material-thin-bg:      rgba(254, 254, 253, 0.70);
+  --material-regular-bg:   rgba(252, 252, 251, 0.80);
+  --material-thick-bg:     rgba(250, 250, 249, 0.92);
+  --material-chrome-bg:    rgba(250, 250, 249, 0.74);
+
+  /* No specular highlight. A bright inset top line is what makes glass look
+     bevelled and metallic; the hairline alone separates it from its neighbour. */
+  --material-edge:   none; /* @kind shadow */
+  --material-hairline: rgba(0, 0, 0, 0.07);
+
+  /* Floating macOS window: broad ambient + tight contact shadow */
+  --shadow-window: 0 0 0 0.5px rgba(28, 25, 23, 0.08),
+                   0 12px 28px rgba(28, 25, 23, 0.12),
+                   0 42px 90px rgba(28, 25, 23, 0.16);
+}
+
+/* Dark — sheets darken and deepen */
+[data-theme="dark"] {
+  --material-ultrathin-bg: rgba(48, 44, 41, 0.55);
+  --material-thin-bg:      rgba(40, 36, 34, 0.68);
+  --material-regular-bg:   rgba(26, 23, 21, 0.78);
+  --material-thick-bg:     rgba(14, 12, 11, 0.90);
+  --material-chrome-bg:    rgba(38, 34, 32, 0.72);
+
+  --material-edge:   none; /* @kind shadow */
+  --material-hairline: rgba(255, 255, 255, 0.12);
+
+  --shadow-window: 0 0 0 0.5px rgba(255, 255, 255, 0.10),
+                   0 12px 28px rgba(0, 0, 0, 0.55),
+                   0 42px 90px rgba(0, 0, 0, 0.70);
+}
+
+/* ==========================================================================
+   Material utilities
+   ========================================================================== */
+
+.j-material-ultrathin,
+.j-material-thin,
+.j-material-regular,
+.j-material-thick,
+.j-material-chrome {
+  box-shadow: var(--material-edge);
+}
+
+.j-material-ultrathin { background: var(--material-ultrathin-bg); -webkit-backdrop-filter: var(--material-ultrathin-filter); backdrop-filter: var(--material-ultrathin-filter); }
+.j-material-thin      { background: var(--material-thin-bg);      -webkit-backdrop-filter: var(--material-thin-filter);      backdrop-filter: var(--material-thin-filter); }
+.j-material-regular   { background: var(--material-regular-bg);   -webkit-backdrop-filter: var(--material-regular-filter);   backdrop-filter: var(--material-regular-filter); }
+.j-material-thick     { background: var(--material-thick-bg);     -webkit-backdrop-filter: var(--material-thick-filter);     backdrop-filter: var(--material-thick-filter); }
+.j-material-chrome    { background: var(--material-chrome-bg);    -webkit-backdrop-filter: var(--material-chrome-filter);    backdrop-filter: var(--material-chrome-filter); }
+
+/* ==========================================================================
+   Chrome edge — the scroll boundary
+   --------------------------------------------------------------------------
+   The one treatment for "content scrolls under chrome": a glass bar with a
+   hairline on the leaving side. Content is simply clipped at that line, which
+   is honest and never makes a full list look cut off.
+
+     <div class="j-chrome-edge">…toolbar contents…</div>   (top bar)
+     <div class="j-chrome-edge j-chrome-edge--bottom">…</div>
+
+   Pair with a scroll container that reserves the bar's height as padding, so
+   content passes beneath the glass rather than starting below it.
+   ========================================================================== */
+
+.j-chrome-edge {
+  background: var(--material-chrome-bg);
+  -webkit-backdrop-filter: var(--material-chrome-filter);
+  backdrop-filter: var(--material-chrome-filter);
+  box-shadow: var(--material-edge);
+  border-bottom: 1px solid var(--material-hairline);
+}
+
+.j-chrome-edge--bottom {
+  border-bottom: none;
+  border-top: 1px solid var(--material-hairline);
+}
+
+/* ==========================================================================
+   Accessibility + capability fallbacks
+   ========================================================================== */
+
+@media (prefers-reduced-transparency: reduce) {
+  .j-material-ultrathin, .j-material-thin, .j-material-regular,
+  .j-material-thick, .j-material-chrome, .j-chrome-edge {
+    background: var(--surface-card);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .j-material-ultrathin, .j-material-thin, .j-material-regular,
+  .j-material-thick, .j-material-chrome, .j-chrome-edge { background: var(--surface-card); }
+}

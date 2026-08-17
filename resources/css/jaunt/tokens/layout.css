@@ -1,0 +1,33 @@
+/* ==========================================================================
+   Jaunt — Layout: grid, breakpoints, z-index
+   ========================================================================== */
+
+:root {
+  /* Content max-widths */
+  --width-prose:   680px;    /* reading column */
+  --width-form:    560px;    /* single-column forms */
+  --width-content: 1200px;   /* centered workspace content */
+  --width-wide:    1440px;   /* dashboards, tables */
+
+  /* 12-col fluid grid */
+  --grid-cols: 12; /* @kind other */
+  --grid-gutter: var(--space-6); /* @kind spacing */
+
+  /* Breakpoints (min-width) — mirror in JS/Tailwind */
+  --bp-sm:  640px;    /* large phone */
+  --bp-md:  768px;    /* tablet — sidebar collapses to mini */
+  --bp-lg:  1024px;   /* laptop — full shell */
+  --bp-xl:  1280px;
+  --bp-2xl: 1536px;
+
+  /* Z-index scale — one source of truth for stacking */
+  --z-base:       0;     /* @kind other */
+  --z-sticky:     100;   /* @kind other */
+  --z-sidebar:    200;   /* @kind other */
+  --z-topbar:     300;   /* @kind other */
+  --z-dropdown:   400;   /* @kind other */
+  --z-overlay:    500;   /* @kind other */
+  --z-dialog:     510;   /* @kind other */
+  --z-command:    600;   /* @kind other */
+  --z-toast:      700;   /* @kind other */
+}

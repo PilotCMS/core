@@ -1,0 +1,39 @@
+/* ==========================================================================
+   Jaunt — Motion
+   Motion communicates state, never entertains. Short durations, spring-ish
+   easing, everything interruptible. Default UI feedback is 120–180ms.
+   Respect prefers-reduced-motion: fall back to opacity-only / instant.
+   ========================================================================== */
+
+:root {
+  /* Durations */
+  --dur-instant: 80ms;  /* @kind other */
+  --dur-fast:    130ms; /* @kind other */
+  --dur-base:    180ms; /* @kind other */
+  --dur-slow:    260ms; /* @kind other */
+  --dur-slower:  400ms; /* @kind other */
+
+  /* Easing */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);        /* @kind other */
+  --ease-out:      cubic-bezier(0.16, 1, 0.3, 1);     /* @kind other */
+  --ease-in:       cubic-bezier(0.4, 0, 1, 1);        /* @kind other */
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1); /* @kind other */
+
+  /* Common composed transitions */
+  --transition-colors: color var(--dur-instant) var(--ease-standard),
+                        background-color var(--dur-instant) var(--ease-standard),
+                        border-color var(--dur-instant) var(--ease-standard),
+                        box-shadow var(--dur-instant) var(--ease-standard); /* @kind other */
+  --transition-transform: transform var(--dur-fast) var(--ease-spring); /* @kind other */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-instant: 0ms; /* @kind other */
+    --dur-fast:    0ms; /* @kind other */
+    --dur-base:    0ms; /* @kind other */
+    --dur-slow:    0ms; /* @kind other */
+    --dur-slower:  0ms; /* @kind other */
+    --ease-spring: var(--ease-standard);
+  }
+}

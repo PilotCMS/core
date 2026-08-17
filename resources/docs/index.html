@@ -1,0 +1,1572 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pilot CMS Documentation</title>
+    <meta name="description" content="Detailed installation documentation for Pilot CMS, Incontext, and the Pilot Laravel connector package.">
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #fff;
+            --text: #111827;
+            --muted: #4b5563;
+            --subtle: #6b7280;
+            --line: #e5e7eb;
+            --panel: #f9fafb;
+            --panel-strong: #f3f4f6;
+            --code-bg: #171923;
+            --code-text: #f9fafb;
+            --brand: #ff2d20;
+            --brand-dark: #d52217;
+            --link: #b42318;
+            --green: #0f766e;
+            --yellow: #92400e;
+            --radius: 8px;
+            --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-sans);
+            font-size: 16px;
+            line-height: 1.7;
+        }
+
+        a {
+            color: var(--link);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        code,
+        pre {
+            font-family: var(--font-mono);
+        }
+
+        code {
+            border-radius: 4px;
+            background: var(--panel-strong);
+            color: #991b1b;
+            font-size: 0.9em;
+            padding: 0.15rem 0.3rem;
+        }
+
+        pre {
+            margin: 1.25rem 0;
+            overflow-x: auto;
+            border-radius: var(--radius);
+            background: var(--code-bg);
+            color: var(--code-text);
+            font-size: 0.875rem;
+            line-height: 1.65;
+            padding: 1.1rem 1.25rem;
+        }
+
+        pre code {
+            background: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.94rem;
+        }
+
+        th,
+        td {
+            border: 1px solid var(--line);
+            padding: 0.8rem 0.9rem;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            background: var(--panel);
+            font-weight: 700;
+        }
+
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(14px);
+        }
+
+        .topbar-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 0.85rem 1.25rem;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--text);
+            font-weight: 800;
+            letter-spacing: 0;
+        }
+
+        .brand-mark {
+            display: grid;
+            width: 34px;
+            height: 34px;
+            place-items: center;
+            border-radius: 7px;
+            background: var(--brand);
+            color: #fff;
+            font-weight: 900;
+        }
+
+        .version {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            color: var(--muted);
+            font-size: 0.84rem;
+            padding: 0.32rem 0.7rem;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 285px minmax(0, 1fr);
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        .sidebar {
+            position: sticky;
+            top: 65px;
+            align-self: start;
+            height: calc(100vh - 65px);
+            overflow-y: auto;
+            border-right: 1px solid var(--line);
+            padding: 2rem 1.25rem 3rem;
+        }
+
+        .sidebar h2 {
+            margin: 0 0 0.75rem;
+            color: var(--subtle);
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .sidebar nav {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .sidebar ul {
+            display: grid;
+            gap: 0.2rem;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .sidebar a {
+            display: block;
+            border-radius: 6px;
+            color: var(--muted);
+            font-size: 0.94rem;
+            line-height: 1.35;
+            padding: 0.32rem 0.45rem;
+        }
+
+        .sidebar a:hover {
+            background: var(--panel);
+            color: var(--brand-dark);
+            text-decoration: none;
+        }
+
+        .content {
+            min-width: 0;
+            padding: 3.2rem min(7vw, 6rem) 6rem;
+        }
+
+        .doc {
+            max-width: 920px;
+        }
+
+        .eyebrow {
+            margin: 0 0 0.9rem;
+            color: var(--brand-dark);
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 0;
+            color: #0f172a;
+            font-size: clamp(2.55rem, 5vw, 4.5rem);
+            line-height: 1.04;
+            letter-spacing: 0;
+        }
+
+        h2 {
+            margin: 4rem 0 1rem;
+            border-top: 1px solid var(--line);
+            padding-top: 2.25rem;
+            color: #111827;
+            font-size: 2rem;
+            line-height: 1.2;
+            letter-spacing: 0;
+        }
+
+        h3 {
+            margin: 2.4rem 0 0.75rem;
+            color: #111827;
+            font-size: 1.35rem;
+            line-height: 1.28;
+            letter-spacing: 0;
+        }
+
+        h4 {
+            margin: 1.9rem 0 0.5rem;
+            font-size: 1.04rem;
+        }
+
+        p {
+            margin: 0.85rem 0;
+        }
+
+        .lead {
+            max-width: 760px;
+            margin-top: 1.35rem;
+            color: var(--muted);
+            font-size: 1.18rem;
+            line-height: 1.85;
+        }
+
+        .intro-grid,
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .card,
+        .note,
+        .warning,
+        .success {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: var(--panel);
+            padding: 1rem 1.1rem;
+        }
+
+        .card h3 {
+            margin-top: 0;
+            font-size: 1.05rem;
+        }
+
+        .card p,
+        .note p,
+        .warning p,
+        .success p {
+            margin-bottom: 0;
+        }
+
+        .note {
+            border-left: 4px solid var(--brand);
+        }
+
+        .warning {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .success {
+            border-left: 4px solid var(--green);
+        }
+
+        .steps {
+            counter-reset: step;
+            display: grid;
+            gap: 1.25rem;
+            margin: 1.6rem 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .steps > li {
+            counter-increment: step;
+            position: relative;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: #fff;
+            padding: 1.25rem 1.25rem 1.25rem 4.25rem;
+        }
+
+        .steps > li::before {
+            content: counter(step);
+            position: absolute;
+            top: 1.25rem;
+            left: 1.25rem;
+            display: grid;
+            width: 2rem;
+            height: 2rem;
+            place-items: center;
+            border-radius: 999px;
+            background: var(--brand);
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 800;
+        }
+
+        .steps h3 {
+            margin-top: 0;
+        }
+
+        .checklist {
+            display: grid;
+            gap: 0.5rem;
+            padding-left: 1.35rem;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            background: #fee2e2;
+            color: #991b1b;
+            font-size: 0.78rem;
+            font-weight: 800;
+            padding: 0.2rem 0.55rem;
+        }
+
+        .divider {
+            height: 1px;
+            margin: 3rem 0;
+            background: var(--line);
+        }
+
+        @media (max-width: 1040px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: static;
+                height: auto;
+                border-right: 0;
+                border-bottom: 1px solid var(--line);
+                padding: 1.2rem;
+            }
+
+            .sidebar nav {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .content {
+                padding: 2.5rem 1.25rem 5rem;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .topbar-inner {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 0.7rem;
+            }
+
+            .sidebar nav,
+            .intro-grid,
+            .cards {
+                grid-template-columns: 1fr;
+            }
+
+            .steps > li {
+                padding-left: 1.25rem;
+            }
+
+            .steps > li::before {
+                position: static;
+                margin-bottom: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div class="topbar-inner">
+            <a class="brand" href="#top" aria-label="Pilot CMS documentation home">
+                <span class="brand-mark">P</span>
+                <span>Pilot CMS Documentation</span>
+            </a>
+            <span class="version">Laravel 12 style docs <strong>v1</strong></span>
+        </div>
+    </header>
+
+    <div class="layout">
+        <aside class="sidebar" aria-label="Documentation navigation">
+            <nav>
+                <section>
+                    <h2>Getting Started</h2>
+                    <ul>
+                        <li><a href="#overview">Overview</a></li>
+                        <li><a href="#system-requirements">System Requirements</a></li>
+                        <li><a href="#installation-paths">Installation Paths</a></li>
+                        <li><a href="#cms-installation">Install Pilot CMS</a></li>
+                        <li><a href="#first-login">First Login</a></li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>Connector</h2>
+                    <ul>
+                        <li><a href="#connector-installation">Install Laravel Connector</a></li>
+                        <li><a href="#connector-configuration">Configure Connector</a></li>
+                        <li><a href="#connector-rendering">Render Content</a></li>
+                        <li><a href="#asset-handling">Asset Handling</a></li>
+                        <li><a href="#preview-links">Preview Links</a></li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>Incontext</h2>
+                    <ul>
+                        <li><a href="#incontext-installation">Install Incontext</a></li>
+                        <li><a href="#incontext-markup">Editable Markup</a></li>
+                        <li><a href="#incontext-api">Incontext API</a></li>
+                        <li><a href="#security-model">Security Model</a></li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>Operations</h2>
+                    <ul>
+                        <li><a href="#production-checklist">Production Checklist</a></li>
+                        <li><a href="#testing-verification">Testing Verification</a></li>
+                        <li><a href="#troubleshooting">Troubleshooting</a></li>
+                        <li><a href="#reference">Reference</a></li>
+                    </ul>
+                </section>
+            </nav>
+        </aside>
+
+        <main id="top" class="content">
+            <article class="doc">
+                <p class="eyebrow">Pilot CMS</p>
+                <h1>Installation</h1>
+                <p class="lead">
+                    This guide documents how to install the Pilot CMS application, connect a Laravel frontend with the
+                    <code>pilot/laravel</code> package, and enable Incontext editing for iframe preview workflows.
+                    It is written in the same practical structure as Laravel's documentation: concepts first, exact
+                    commands next, then configuration, verification, and troubleshooting.
+                </p>
+
+                <div class="intro-grid">
+                    <section class="card">
+                        <h3>CMS Application</h3>
+                        <p>The authoring application where editors manage spaces, content, block types, assets, datasources, users, settings, previews, and publishing workflow.</p>
+                    </section>
+                    <section class="card">
+                        <h3>Laravel Connector</h3>
+                        <p>The frontend adapter that reads Pilot content, resolves assets, renders Blade views, exposes preview routes, and ships editor bridge views.</p>
+                    </section>
+                    <section class="card">
+                        <h3>Incontext</h3>
+                        <p>The editing layer that marks fields and blocks in rendered pages so the CMS can inspect and update content while an editor is previewing a page.</p>
+                    </section>
+                </div>
+
+                <section id="overview">
+                    <h2>Overview</h2>
+                    <p>
+                        Pilot is a Laravel-based, Storyblok-style CMS. The CMS owns editorial data. A Laravel frontend,
+                        either the CMS application itself or a separate Laravel site, renders that data using Blade
+                        components. The connector package provides the integration surface between those two systems.
+                    </p>
+                    <p>
+                        The default development setup in this repository keeps everything in one application:
+                        content models, admin UI, public theme rendering, REST delivery, GraphQL delivery, preview
+                        routes, and the package source for the Laravel connector. A production setup may keep the CMS
+                        and the website separate, with the website depending on <code>pilot/laravel</code>.
+                    </p>
+
+                    <div class="note">
+                        <strong>Source of truth.</strong>
+                        <p>
+                            The connector package in this repository is located at <code>packages/pilot-laravel</code>.
+                            Its package name is <code>pilot/laravel</code>, and its service provider is
+                            <code>Pilot\Laravel\PilotServiceProvider</code>.
+                        </p>
+                    </div>
+
+                    <h3>Architecture at a glance</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Layer</th>
+                                <th>Responsibility</th>
+                                <th>Primary files</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>CMS application</td>
+                                <td>Stores content, block schemas, assets, roles, settings, preview targets, revisions, and publishing metadata.</td>
+                                <td><code>app/Livewire/Admin</code>, <code>app/Models</code>, <code>database/migrations</code>, <code>routes/admin.php</code></td>
+                            </tr>
+                            <tr>
+                                <td>Delivery API</td>
+                                <td>Provides published and protected draft content for headless consumers.</td>
+                                <td><code>routes/api.php</code>, <code>app/Http/Controllers/Api</code>, <code>graphql/schema.graphql</code></td>
+                            </tr>
+                            <tr>
+                                <td>Theme rendering</td>
+                                <td>Maps normalized block payloads to Blade views.</td>
+                                <td><code>resources/views/themes/{theme}</code>, <code>config/cms.php</code></td>
+                            </tr>
+                            <tr>
+                                <td>Laravel connector</td>
+                                <td>Installs reusable helpers, config, views, preview routes, and Incontext endpoints in a Laravel frontend.</td>
+                                <td><code>packages/pilot-laravel</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <section id="system-requirements">
+                    <h2>System Requirements</h2>
+                    <p>
+                        Install the CMS on a machine that can run a modern Laravel 12 application. This repository's
+                        dependency lock currently requires a PHP runtime newer than the system PHP found on many Macs,
+                        so use the same PHP binary for Composer, Artisan, queues, and tests.
+                    </p>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Dependency</th>
+                                <th>Requirement</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>PHP</td>
+                                <td>8.4.1 or newer; PHP 8.5 works for this repository</td>
+                                <td>The project instructions identify PHP 8.5.2. Herd users can use the path to a supported PHP binary.</td>
+                            </tr>
+                            <tr>
+                                <td>Composer</td>
+                                <td>2.x</td>
+                                <td>Use it with the same PHP version used by Artisan.</td>
+                            </tr>
+                            <tr>
+                                <td>Node.js and npm</td>
+                                <td>Current LTS recommended</td>
+                                <td>Needed for Vite, Tailwind CSS v4, and frontend assets.</td>
+                            </tr>
+                            <tr>
+                                <td>Database</td>
+                                <td>MySQL, MariaDB, PostgreSQL, or SQLite</td>
+                                <td>MySQL is the opinionated local default; SQLite remains available as an explicit opt-in.</td>
+                            </tr>
+                            <tr>
+                                <td>Web server</td>
+                                <td>Herd, Valet, Sail, nginx, Apache, or Caddy</td>
+                                <td>Public entry point must be <code>public/index.php</code>.</td>
+                            </tr>
+                            <tr>
+                                <td>Storage</td>
+                                <td>Local disk or S3-compatible disk</td>
+                                <td>Assets are stored through Laravel's filesystem.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Recommended local PHP command</h3>
+                    <p>
+                        If you are using Herd and the shell's default PHP is too old, call Artisan through the Herd
+                        binary explicitly:
+                    </p>
+                    <pre><code class="language-bash">&lt;path-to-php&gt; artisan about</code></pre>
+
+                    <p>
+                        If your Composer command is also using the wrong PHP version, run Composer with the correct
+                        binary:
+                    </p>
+                    <pre><code class="language-bash">&lt;path-to-php&gt; composer install</code></pre>
+                </section>
+
+                <section id="installation-paths">
+                    <h2>Installation Paths</h2>
+                    <p>
+                        There are two supported ways to install Pilot for development and implementation work.
+                        Choose the path that matches your deployment model.
+                    </p>
+
+                    <div class="cards">
+                        <section class="card">
+                            <h3>Single Laravel app</h3>
+                            <p>Use this repository as both the CMS and the public rendering app. This is fastest for local development and theme work.</p>
+                        </section>
+                        <section class="card">
+                            <h3>CMS plus Laravel site</h3>
+                            <p>Run Pilot as the CMS and install <code>pilot/laravel</code> into a separate Laravel frontend.</p>
+                        </section>
+                        <section class="card">
+                            <h3>Headless frontend</h3>
+                            <p>Use REST or GraphQL APIs from any frontend. Install the Laravel connector only when the frontend is Laravel.</p>
+                        </section>
+                    </div>
+
+                    <div class="warning">
+                        <strong>Do not mix runtime versions.</strong>
+                        <p>
+                            The most common local installation failure is installing dependencies with one PHP version
+                            and running Artisan with another. Keep Composer, Artisan, queue workers, schedulers, and
+                            tests on the same PHP binary.
+                        </p>
+                    </div>
+                </section>
+
+                <section id="cms-installation">
+                    <h2>Install Pilot CMS</h2>
+                    <p>
+                        This section installs the CMS application itself. It assumes you have cloned the repository
+                        and are working from the project root.
+                    </p>
+
+                    <ol class="steps">
+                        <li>
+                            <h3>Install PHP dependencies</h3>
+                            <p>Install the Composer dependencies with the PHP runtime that satisfies the lock file.</p>
+                            <pre><code class="language-bash">composer install</code></pre>
+                            <p>When the shell PHP is older than the project requires, use the PHP binary explicitly:</p>
+                            <pre><code class="language-bash">&lt;path-to-php&gt; composer install</code></pre>
+                        </li>
+
+                        <li>
+                            <h3>Install JavaScript dependencies</h3>
+                            <p>Install the Vite, Tailwind, and frontend tooling dependencies.</p>
+                            <pre><code class="language-bash">npm install</code></pre>
+                        </li>
+
+                        <li>
+                            <h3>Create the environment file</h3>
+                            <p>Copy the example environment file if one does not already exist, then generate the app key.</p>
+                            <pre><code class="language-bash">cp .env.example .env
+php artisan key:generate</code></pre>
+                            <p>If you are using Herd's PHP binary:</p>
+                            <pre><code class="language-bash">cp .env.example .env
+&lt;path-to-php&gt; artisan key:generate</code></pre>
+                        </li>
+
+                        <li>
+                            <h3>Configure the database</h3>
+                            <p>
+                                Pilot defaults to MySQL. Start MySQL, create an empty <code>pilot</code> database, and
+                                adjust the standard Laravel credentials in <code>.env</code> when needed.
+                            </p>
+                            <pre><code class="language-dotenv">DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=pilot
+DB_USERNAME=root
+DB_PASSWORD=</code></pre>
+                            <p>SQLite remains available as an explicit alternative:</p>
+                            <pre><code class="language-bash">touch database/database.sqlite</code></pre>
+                            <pre><code class="language-dotenv">DB_CONNECTION=sqlite
+DB_DATABASE=&lt;path-to-database&gt;/database.sqlite</code></pre>
+                        </li>
+
+                        <li>
+                            <h3>Configure Pilot CMS defaults</h3>
+                            <p>
+                                The CMS application reads public rendering defaults from <code>config/cms.php</code>.
+                                Set the default space and home slug so the public routes can resolve the correct page.
+                            </p>
+                            <pre><code class="language-dotenv">CMS_DEFAULT_SPACE=main
+CMS_HOME_SLUG=home
+CMS_DELIVERY_SOURCE=mysql
+CMS_THEME=default</code></pre>
+                            <p>
+                                Some historical notes in the repository use <code>PILOT_DEFAULT_SPACE</code> and
+                                <code>PILOT_HOME_SLUG</code>. Those names are used by the connector package. For the
+                                CMS application's own <code>config/cms.php</code>, use the <code>CMS_</code> keys.
+                            </p>
+                        </li>
+
+                        <li>
+                            <h3>Run the interactive installer</h3>
+                            <p>Create the schema with Laravel migrations, seed Pilot's roles and block types, and create the first administrator account.</p>
+                            <pre><code class="language-bash">php artisan pilot:install</code></pre>
+                            <p>The installer asks for the administrator's name, email address, and password. No default user credentials are seeded. In production, allow migrations with <code>--force</code>:</p>
+                            <pre><code class="language-bash">php artisan pilot:install --force</code></pre>
+                        </li>
+
+                        <li>
+                            <h3>Verify the account and default space</h3>
+                            <p>The installer assigns the new account the Admin role and initializes the <code>main</code> space and starter content under that account.</p>
+                        </li>
+
+                        <li>
+                            <h3>Link public storage</h3>
+                            <p>
+                                The CMS asset manager stores files through Laravel's filesystem. For local public
+                                storage, create the standard storage symlink.
+                            </p>
+                            <pre><code class="language-bash">php artisan storage:link</code></pre>
+                        </li>
+
+                        <li>
+                            <h3>Build frontend assets</h3>
+                            <p>Build static assets for production or run Vite during development.</p>
+                            <pre><code class="language-bash">npm run build</code></pre>
+                            <p>For active development:</p>
+                            <pre><code class="language-bash">npm run dev</code></pre>
+                        </li>
+
+                        <li>
+                            <h3>Start the application</h3>
+                            <p>Run the full development stack or serve the app with your local web server.</p>
+                            <pre><code class="language-bash">composer run dev</code></pre>
+                            <p>For a single-process Laravel server:</p>
+                            <pre><code class="language-bash">php artisan serve</code></pre>
+                        </li>
+                    </ol>
+
+                    <h3>One-command setup</h3>
+                    <p>
+                        The root <code>composer.json</code> includes a <code>setup</code> script that installs PHP
+                        dependencies, creates <code>.env</code>, generates the app key, runs the interactive Pilot
+                        installer, links public storage, installs npm packages, and builds assets. Create and configure
+                        the MySQL database first; the command will prompt for the administrator account:
+                    </p>
+                    <pre><code class="language-bash">composer run setup</code></pre>
+                    <p>
+                        Use the manual steps instead when you need to choose a different database, tune storage, or
+                        confirm each phase independently.
+                    </p>
+                </section>
+
+                <section id="first-login">
+                    <h2>First Login</h2>
+                    <p>
+                        Open the CMS dashboard and sign in with the administrator account created by
+                        <code>php artisan pilot:install</code>. No default user accounts or passwords are installed.
+                        Create additional Editor, Author, and Viewer accounts from user management as needed.
+                    </p>
+
+                    <p>
+                        The main admin dashboard is available at <code>/admin/dashboard</code>. Common sections include
+                        <code>/admin/content</code>, <code>/admin/assets</code>, <code>/admin/datasources</code>,
+                        <code>/admin/users</code>, and <code>/admin/settings</code>.
+                    </p>
+                </section>
+
+                <section id="connector-installation">
+                    <h2>Install Laravel Connector</h2>
+                    <p>
+                        Install the connector into a Laravel application that should render Pilot content. In this
+                        repository, the connector is developed locally from <code>packages/pilot-laravel</code>. In a
+                        separate Laravel frontend, install the published Composer package once available.
+                    </p>
+
+                    <h3>Local path repository installation</h3>
+                    <p>
+                        During local development, add the connector as a path repository from the frontend application's
+                        <code>composer.json</code>:
+                    </p>
+                    <pre><code class="language-json">{
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../Pilot/packages/pilot-laravel",
+            "options": {
+                "symlink": true
+            }
+        }
+    ],
+    "require": {
+        "pilot/laravel": "*"
+    }
+}</code></pre>
+
+                    <p>Then install it:</p>
+                    <pre><code class="language-bash">composer update pilot/laravel</code></pre>
+
+                    <h3>Published package installation</h3>
+                    <p>
+                        When the package is published to a Composer registry, install it like any Laravel package:
+                    </p>
+                    <pre><code class="language-bash">composer require pilot/laravel</code></pre>
+
+                    <h3>Package auto-discovery</h3>
+                    <p>
+                        The connector registers itself through Laravel package auto-discovery. Its provider merges
+                        <code>config/pilot.php</code>, loads package views, registers preview and Incontext routes when
+                        enabled, and binds a singleton manager as <code>pilot</code>.
+                    </p>
+                    <pre><code class="language-json">{
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Pilot\\Laravel\\PilotServiceProvider"
+            ],
+            "aliases": {
+                "Pilot": "Pilot\\Laravel\\Facades\\Pilot"
+            }
+        }
+    }
+}</code></pre>
+
+                    <h3>Publish configuration and views</h3>
+                    <p>
+                        Publish the connector config when the frontend app needs to override defaults:
+                    </p>
+                    <pre><code class="language-bash">php artisan vendor:publish --tag=pilot-config</code></pre>
+                    <p>
+                        Publish connector views only when you need to customize the package bridge or preview markup:
+                    </p>
+                    <pre><code class="language-bash">php artisan vendor:publish --tag=pilot-views</code></pre>
+                </section>
+
+                <section id="connector-configuration">
+                    <h2>Configure Connector</h2>
+                    <p>
+                        The connector reads configuration from <code>config/pilot.php</code>. These values define the
+                        default content space, locale, CMS origin, asset origin, page views, block views, preview routes,
+                        and Incontext routes.
+                    </p>
+
+                    <pre><code class="language-dotenv">PILOT_DEFAULT_SPACE=website
+PILOT_HOME_SLUG=home
+PILOT_DEFAULT_LOCALE=en
+PILOT_CMS_URL=https://cms.example.com
+PILOT_ASSET_URL=https://cms.example.com
+
+PILOT_PAGE_VIEW=page
+PILOT_BLOCKS_VIEW=blocks
+
+PILOT_EDITOR_BRIDGE_ENABLED=true
+PILOT_LIVE_PREVIEW_ENABLED=true
+PILOT_LIVE_PREVIEW_ROOT="[data-pilot-live-root]"
+
+PILOT_IN_CONTEXT_ENABLED=true
+PILOT_IN_CONTEXT_PATH=_pilot/in-context
+
+PILOT_PREVIEW_ROUTES=true
+PILOT_PREVIEW_PATH=_pilot/preview
+PILOT_PREVIEW_SECRET="${APP_KEY}"
+PILOT_PREVIEW_EXPIRES_MINUTES=60</code></pre>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Key</th>
+                                <th>Purpose</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>PILOT_DEFAULT_SPACE</code></td>
+                                <td>The content space slug used by default queries and renderers.</td>
+                            </tr>
+                            <tr>
+                                <td><code>PILOT_HOME_SLUG</code></td>
+                                <td>The slug treated as the homepage when resolving root content.</td>
+                            </tr>
+                            <tr>
+                                <td><code>PILOT_DEFAULT_LOCALE</code></td>
+                                <td>The locale used when localizing block field arrays.</td>
+                            </tr>
+                            <tr>
+                                <td><code>PILOT_CMS_URL</code></td>
+                                <td>The CMS origin used when the frontend needs to call back to Pilot.</td>
+                            </tr>
+                            <tr>
+                                <td><code>PILOT_ASSET_URL</code></td>
+                                <td>The base URL for relative asset paths. Defaults to <code>PILOT_CMS_URL</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>PILOT_PREVIEW_SECRET</code></td>
+                                <td>The HMAC secret for package preview and Incontext requests. Use a strong shared secret in split deployments.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <section id="connector-rendering">
+                    <h2>Render Content</h2>
+                    <p>
+                        The connector exposes a manager through the <code>Pilot</code> facade and the <code>pilot</code>
+                        container binding. It provides access to content queries, rendering, and preview URL generation.
+                    </p>
+
+                    <h3>Basic controller</h3>
+                    <p>
+                        A simple Laravel frontend controller can resolve content by slug, then return a page view. The
+                        exact query methods depend on the delivery implementation wired behind the connector, but the
+                        view contract should stay stable: pass normalized content and render blocks through a dedicated
+                        block partial.
+                    </p>
+                    <pre><code class="language-php">&lt;?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\Request;
+use Pilot\Laravel\Facades\Pilot;
+
+class PageController
+{
+    public function show(Request $request, string $slug = 'home'): View
+    {
+        $content = Pilot::content()
+            -&gt;space(config('pilot.default_space'))
+            -&gt;locale($request-&gt;getLocale())
+            -&gt;slug($slug)
+            -&gt;firstOrFail();
+
+        return view(config('pilot.views.page'), [
+            'content' =&gt; $content,
+            'blocks' =&gt; $content['content']['body'] ?? [],
+        ]);
+    }
+}</code></pre>
+
+                    <h3>Blade page view</h3>
+                    <p>
+                        Keep the page view small. It should set up the layout, expose a live preview root, and delegate
+                        block rendering to a block partial.
+                    </p>
+                    <pre><code class="language-blade">&lt;x-layouts.marketing&gt;
+    &lt;main data-pilot-live-root&gt;
+        @include(config('pilot.views.blocks'), [
+            'blocks' =&gt; $blocks,
+        ])
+    &lt;/main&gt;
+&lt;/x-layouts.marketing&gt;</code></pre>
+
+                    <h3>Block partial</h3>
+                    <p>
+                        Block rendering should be deterministic and tolerant of missing views. Missing block views
+                        should render a fallback instead of breaking the whole page.
+                    </p>
+                    <pre><code class="language-blade">@foreach ($blocks as $block)
+    @php
+        $component = $block['component'] ?? $block['type'] ?? 'fallback';
+        $view = "blocks.{$component}";
+    @endphp
+
+    @includeIf($view, ['block' =&gt; $block])
+@endforeach</code></pre>
+
+                    <h3>Block view</h3>
+                    <p>
+                        Read display content from <code>$block['data']</code>. Read nested content from
+                        <code>$block['children']</code>. Keep block keys stable because they are a public contract
+                        between the CMS and the website.
+                    </p>
+                    <pre><code class="language-blade">@php
+    $title = $block['data']['title'] ?? '';
+    $subtitle = $block['data']['subtitle'] ?? '';
+@endphp
+
+&lt;section class="mx-auto max-w-6xl px-6 py-20"&gt;
+    &lt;h1 class="text-5xl font-bold"&gt;{{ $title }}&lt;/h1&gt;
+
+    @if ($subtitle !== '')
+        &lt;p class="mt-6 text-lg text-slate-600"&gt;{{ $subtitle }}&lt;/p&gt;
+    @endif
+&lt;/section&gt;</code></pre>
+                </section>
+
+                <section id="asset-handling">
+                    <h2>Asset Handling</h2>
+                    <p>
+                        The connector registers helper functions for turning Pilot asset paths into frontend URLs.
+                        Use them instead of manually concatenating CMS URLs in Blade views.
+                    </p>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Helper</th>
+                                <th>Use</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>pilotAsset($path)</code></td>
+                                <td>Returns an absolute URL for a Pilot asset path.</td>
+                            </tr>
+                            <tr>
+                                <td><code>pilotAssets($path)</code></td>
+                                <td>Alias of <code>pilotAsset</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>pilotAssetFormatted($path, $data, $field)</code></td>
+                                <td>Returns URL, source, focal point, object position, and inline style helpers.</td>
+                            </tr>
+                            <tr>
+                                <td><code>pilotAssetsFormatted($path, $data, $field)</code></td>
+                                <td>Alias of <code>pilotAssetFormatted</code>.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <pre><code class="language-blade">@php
+    $image = pilotAssetFormatted(
+        $block['data']['image'] ?? null,
+        $block['data'] ?? [],
+        'image'
+    );
+@endphp
+
+@if ($image['url'] !== '')
+    &lt;img
+        src="{{ $image['url'] }}"
+        alt="{{ $block['data']['alt'] ?? '' }}"
+        style="{{ $image['object_position_style'] }}"
+    &gt;
+@endif</code></pre>
+                </section>
+
+                <section id="preview-links">
+                    <h2>Preview Links</h2>
+                    <p>
+                        The connector can register signed preview routes under <code>_pilot/preview</code>. The route is
+                        controlled by <code>PILOT_PREVIEW_ROUTES</code> and <code>PILOT_PREVIEW_PATH</code>.
+                    </p>
+
+                    <pre><code class="language-text">GET /_pilot/preview/{content}</code></pre>
+
+                    <p>
+                        Preview requests are protected by <code>EnsureValidPilotPreview</code>. The middleware validates
+                        the preview signature, expiration, and configured secret. For split deployments, configure the
+                        same preview secret in the CMS and frontend.
+                    </p>
+
+                    <h3>Preview environment</h3>
+                    <pre><code class="language-dotenv">PILOT_PREVIEW_ROUTES=true
+PILOT_PREVIEW_PATH=_pilot/preview
+PILOT_PREVIEW_SECRET=base64-or-random-shared-secret
+PILOT_PREVIEW_EXPIRES_MINUTES=60</code></pre>
+
+                    <h3>Preview iframe headers</h3>
+                    <p>
+                        Client-facing preview targets must allow the CMS editor origin to embed preview pages in an
+                        iframe. If the frontend returns <code>X-Frame-Options: SAMEORIGIN</code>, browsers will block
+                        cross-origin editor previews before Pilot or Livewire can load the frame.
+                    </p>
+                    <p>
+                        Remove <code>X-Frame-Options</code> from previewable responses, especially
+                        <code>/_pilot/preview/*</code>, and prefer a
+                        <code>Content-Security-Policy</code> <code>frame-ancestors</code> allow-list:
+                    </p>
+                    <pre><code class="language-nginx">add_header Content-Security-Policy "frame-ancestors 'self' https://cms.example.com" always;</code></pre>
+                    <p>
+                        Use the exact CMS editor origin, including scheme and port when needed. Do not use a wildcard.
+                        After changing Forge or nginx headers, reload nginx and confirm the preview response no longer
+                        includes <code>X-Frame-Options: SAMEORIGIN</code>.
+                    </p>
+                </section>
+
+                <section id="incontext-installation">
+                    <h2>Install Incontext</h2>
+                    <p>
+                        Incontext is the package feature that makes rendered pages editable inside the CMS preview.
+                        It does not replace the CMS editor. It adds field and block metadata to the frontend so the
+                        editor can select blocks, fetch block data, update fields, and sync content state.
+                    </p>
+
+                    <ol class="steps">
+                        <li>
+                            <h3>Install and configure the connector</h3>
+                            <p>
+                                Incontext ships with <code>pilot/laravel</code>. Install the connector first, then
+                                publish <code>config/pilot.php</code> if the frontend needs local overrides.
+                            </p>
+                            <pre><code class="language-bash">composer require pilot/laravel
+php artisan vendor:publish --tag=pilot-config</code></pre>
+                        </li>
+
+                        <li>
+                            <h3>Enable Incontext routes</h3>
+                            <p>
+                                Keep connector preview routes enabled unless the frontend registers custom routes.
+                                The package registers Incontext endpoints beneath <code>PILOT_IN_CONTEXT_PATH</code>.
+                            </p>
+                            <pre><code class="language-dotenv">PILOT_PREVIEW_ROUTES=true
+PILOT_IN_CONTEXT_ENABLED=true
+PILOT_IN_CONTEXT_PATH=_pilot/in-context</code></pre>
+                        </li>
+
+                        <li>
+                            <h3>Configure preview trust</h3>
+                            <p>
+                                Incontext write requests are allowed for authenticated users. Unauthenticated preview
+                                requests must include a valid content id, expiration, and HMAC signature. Configure a
+                                shared preview secret in split CMS/frontend deployments.
+                            </p>
+                            <pre><code class="language-dotenv">PILOT_PREVIEW_SECRET=change-me-to-a-shared-secret</code></pre>
+                        </li>
+
+                        <li>
+                            <h3>Add a live preview root</h3>
+                            <p>
+                                The editor bridge replaces the element matching <code>PILOT_LIVE_PREVIEW_ROOT</code>
+                                when live preview renders new HTML. The default selector is
+                                <code>[data-pilot-live-root]</code>.
+                            </p>
+                            <pre><code class="language-blade">&lt;main data-pilot-live-root&gt;
+    @include('blocks', ['blocks' =&gt; $blocks])
+&lt;/main&gt;</code></pre>
+                        </li>
+
+                        <li>
+                            <h3>Annotate editable fields</h3>
+                            <p>
+                                Add Incontext attributes to the smallest meaningful editable element. For a text field,
+                                apply the attributes to the element that displays the text.
+                            </p>
+                            <pre><code class="language-blade">&lt;h1 {!! app(\Pilot\Laravel\Support\InContext::class)-&gt;field($block, 'title') !!}&gt;
+    {{ $block['data']['title'] ?? '' }}
+&lt;/h1&gt;</code></pre>
+                        </li>
+
+                        <li>
+                            <h3>Open the page in preview mode</h3>
+                            <p>
+                                Incontext metadata is emitted in editor contexts. Add <code>pilot_editor=1</code>,
+                                <code>editor=1</code>, or <code>pilot_preview=1</code> to a preview URL, or open the
+                                page from the CMS editor iframe.
+                            </p>
+                            <pre><code class="language-text">https://site.example.com/about?pilot_editor=1</code></pre>
+                        </li>
+                    </ol>
+
+                    <div class="success">
+                        <strong>Expected result.</strong>
+                        <p>
+                            In preview mode, editable fields include <code>data-pilot-editable="field"</code>,
+                            <code>data-pilot-block-id</code>, <code>data-pilot-field</code>, and
+                            <code>data-pilot-field-type</code>. Normal public requests do not include those attributes
+                            unless Incontext is explicitly enabled for the request.
+                        </p>
+                    </div>
+                </section>
+
+                <section id="incontext-markup">
+                    <h2>Editable Markup</h2>
+                    <p>
+                        Incontext annotations should be precise and stable. Mark the field, not the entire section,
+                        when the editor is changing only one value. Mark a block wrapper when the editor needs block
+                        selection, movement, or nested block awareness.
+                    </p>
+
+                    <h3>Text fields</h3>
+                    <pre><code class="language-blade">&lt;h2 {!! app(\Pilot\Laravel\Support\InContext::class)-&gt;field($block, 'headline', 'text') !!}&gt;
+    {{ $block['data']['headline'] ?? '' }}
+&lt;/h2&gt;</code></pre>
+
+                    <h3>Rich text fields</h3>
+                    <pre><code class="language-blade">&lt;div {!! app(\Pilot\Laravel\Support\InContext::class)-&gt;field($block, 'content', 'richtext') !!}&gt;
+    {!! $block['data']['content'] ?? '' !!}
+&lt;/div&gt;</code></pre>
+
+                    <h3>Image fields</h3>
+                    <pre><code class="language-blade">&lt;figure {!! app(\Pilot\Laravel\Support\InContext::class)-&gt;field($block, 'image', 'asset') !!}&gt;
+    &lt;img src="{{ pilotAsset($block['data']['image'] ?? null) }}" alt="{{ $block['data']['alt'] ?? '' }}"&gt;
+&lt;/figure&gt;</code></pre>
+
+                    <h3>Manual attribute output</h3>
+                    <p>
+                        The helper returns an <code>HtmlString</code>, so it should be printed unescaped with
+                        <code>{!! !!}</code>. It returns an empty string when Incontext is disabled or the block does
+                        not have an id.
+                    </p>
+                </section>
+
+                <section id="incontext-api">
+                    <h2>Incontext API</h2>
+                    <p>
+                        When package routes are enabled, the connector registers the following endpoints. The path
+                        prefix defaults to <code>_pilot/in-context</code>.
+                    </p>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Method</th>
+                                <th>Endpoint</th>
+                                <th>Purpose</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>GET</code></td>
+                                <td><code>/_pilot/in-context/contents/{content}/sync</code></td>
+                                <td>Returns content metadata, sync key, and server time for preview synchronization.</td>
+                            </tr>
+                            <tr>
+                                <td><code>GET</code></td>
+                                <td><code>/_pilot/in-context/blocks/{block}</code></td>
+                                <td>Returns localized block data, raw data, schema, and parent content metadata.</td>
+                            </tr>
+                            <tr>
+                                <td><code>PATCH</code></td>
+                                <td><code>/_pilot/in-context/blocks/{block}</code></td>
+                                <td>Updates one or more schema-defined block fields.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Update payload</h3>
+                    <p>
+                        Updates accept a <code>fields</code> object and optional <code>locale</code>. Fields not present
+                        in the block type schema are ignored. Translatable fields are written into the selected locale.
+                    </p>
+                    <pre><code class="language-json">{
+    "locale": "en",
+    "fields": {
+        "title": "Updated headline",
+        "subtitle": "Updated supporting copy"
+    }
+}</code></pre>
+
+                    <h3>Successful update response</h3>
+                    <pre><code class="language-json">{
+    "updated": true,
+    "block": {
+        "id": 123,
+        "type": "hero",
+        "name": "Hero",
+        "updatedAt": "2026-06-10T18:25:00.000000Z",
+        "data": {
+            "title": "Updated headline"
+        },
+        "schema": {
+            "fields": []
+        },
+        "content": {
+            "id": 45,
+            "name": "Home",
+            "slug": "home",
+            "updatedAt": "2026-06-10T18:25:00.000000Z",
+            "syncKey": "..."
+        }
+    }
+}</code></pre>
+                </section>
+
+                <section id="security-model">
+                    <h2>Security Model</h2>
+                    <p>
+                        Pilot separates public rendering from editing. Public pages should render only published
+                        content. Draft content, preview updates, and Incontext writes require authentication or a valid
+                        signed preview request.
+                    </p>
+
+                    <h3>Incontext request authorization</h3>
+                    <p>
+                        The package controller allows Incontext requests when either condition is true:
+                    </p>
+                    <ul class="checklist">
+                        <li>The current Laravel request has an authenticated user.</li>
+                        <li>The request includes the correct content id, a future expiration timestamp, and a valid HMAC signature.</li>
+                    </ul>
+
+                    <h3>Preview signature inputs</h3>
+                    <p>
+                        The signature is based on <code>{contentId}|{expiresAt}</code> and uses
+                        <code>pilot.preview.secret</code>. If no preview secret is configured, the package falls back to
+                        <code>app.key</code>. In production split deployments, configure an explicit shared secret
+                        instead of relying on app keys matching.
+                    </p>
+
+                    <pre><code class="language-php">$expected = hash_hmac(
+    'sha256',
+    "{$contentId}|{$expiresAt}",
+    config('pilot.preview.secret') ?: config('app.key')
+);</code></pre>
+
+                    <h3>Public page rule</h3>
+                    <p>
+                        Public routes should only select content where <code>type = page</code>,
+                        <code>status = published</code>, <code>published_at</code> is not null, and the slug matches the
+                        route. Do not expose draft content on public routes without a signed preview path.
+                    </p>
+                </section>
+
+                <section id="production-checklist">
+                    <h2>Production Checklist</h2>
+                    <p>
+                        Use this checklist before launching either the CMS or a Laravel frontend that consumes Pilot.
+                    </p>
+
+                    <h3>CMS application</h3>
+                    <ul class="checklist">
+                        <li>Set <code>APP_ENV=production</code> and <code>APP_DEBUG=false</code>.</li>
+                        <li>Set a trusted <code>APP_URL</code> that matches the public CMS URL.</li>
+                        <li>Use a persistent database, not a disposable local SQLite file.</li>
+                        <li>Run <code>php artisan migrate --force</code> during deployment.</li>
+                        <li>Run <code>php artisan storage:link</code> when using the public local disk.</li>
+                        <li>Configure S3 or another persistent disk for uploaded assets when deploying across multiple servers.</li>
+                        <li>Run queue workers for scheduled publishing, asset processing, and any future async work.</li>
+                        <li>Run the Laravel scheduler if scheduled content publishing is enabled.</li>
+                        <li>Build assets with <code>npm run build</code>.</li>
+                        <li>Cache configuration, routes, events, and views after all environment variables are set.</li>
+                    </ul>
+
+                    <h3>Laravel frontend connector</h3>
+                    <ul class="checklist">
+                        <li>Set <code>PILOT_CMS_URL</code> to the CMS origin.</li>
+                        <li>Set <code>PILOT_ASSET_URL</code> if assets are served from a CDN or storage domain.</li>
+                        <li>Set <code>PILOT_DEFAULT_SPACE</code>, <code>PILOT_HOME_SLUG</code>, and <code>PILOT_DEFAULT_LOCALE</code>.</li>
+                        <li>Set an explicit <code>PILOT_PREVIEW_SECRET</code> shared with the CMS.</li>
+                        <li>Keep <code>PILOT_PREVIEW_ROUTES=true</code> unless custom preview routes are registered.</li>
+                        <li>Keep <code>PILOT_IN_CONTEXT_ENABLED=true</code> only for sites that support editor preview workflows.</li>
+                        <li>Confirm the frontend's CSP allows the CMS editor to embed the preview origin when iframe preview is required.</li>
+                    </ul>
+
+                    <h3>Security</h3>
+                    <ul class="checklist">
+                        <li>Rotate seeded passwords before exposing any non-local environment.</li>
+                        <li>Restrict admin access to trusted users.</li>
+                        <li>Use HTTPS for CMS and frontend origins.</li>
+                        <li>Do not expose draft API responses without Sanctum auth or a signed preview route.</li>
+                        <li>Do not log preview secrets or signed preview URLs in long-lived public logs.</li>
+                    </ul>
+                </section>
+
+                <section id="testing-verification">
+                    <h2>Testing Verification</h2>
+                    <p>
+                        After installation, run the minimum tests that prove the affected surface works. For a full CMS
+                        install, run the full suite. For connector or preview work, run focused feature tests first.
+                    </p>
+
+                    <h3>Full test suite</h3>
+                    <pre><code class="language-bash">php artisan test --compact</code></pre>
+
+                    <h3>Public rendering and preview tests</h3>
+                    <pre><code class="language-bash">php artisan test --compact \
+  tests/Feature/PublicThemeTest.php \
+  tests/Feature/CmsDeliveryApiTest.php \
+  tests/Feature/CmsLivePreviewTest.php \
+  tests/Feature/Admin/ContentPreviewTest.php</code></pre>
+
+                    <h3>Package-focused tests</h3>
+                    <pre><code class="language-bash">php artisan test --compact tests/Feature/SpacePreviewTargetsTest.php</code></pre>
+
+                    <h3>Formatting</h3>
+                    <p>Before finalizing PHP changes, run Pint in fix mode:</p>
+                    <pre><code class="language-bash">vendor/bin/pint --dirty --format agent</code></pre>
+
+                    <div class="note">
+                        <strong>Static docs verification.</strong>
+                        <p>
+                            This documentation page is static HTML in <code>public/docs/index.html</code>. It should be
+                            verified with a file-content test and, when served locally, a browser check at
+                            <code>/docs/</code>.
+                        </p>
+                    </div>
+                </section>
+
+                <section id="troubleshooting">
+                    <h2>Troubleshooting</h2>
+
+                    <h3>Composer says the PHP platform is too old</h3>
+                    <p>
+                        Your shell is using an older PHP than the dependencies require. Run Composer and Artisan with
+                        the same supported PHP binary.
+                    </p>
+                    <pre><code class="language-bash">&lt;path-to-php&gt; artisan about</code></pre>
+
+                    <h3>The CMS loads but styles are missing</h3>
+                    <p>
+                        Build frontend assets or run the Vite dev server. In production, deploy the generated
+                        <code>public/build</code> assets.
+                    </p>
+                    <pre><code class="language-bash">npm run build</code></pre>
+
+                    <h3>Uploaded assets return 404</h3>
+                    <p>
+                        Confirm the storage disk is configured and the public storage symlink exists.
+                    </p>
+                    <pre><code class="language-bash">php artisan storage:link</code></pre>
+
+                    <h3>Large asset uploads fail with 413</h3>
+                    <p>
+                        Increase the web server upload limit. This repository includes a helper script for Herd/nginx
+                        local development:
+                    </p>
+                    <pre><code class="language-bash">chmod +x fix-upload-limit.sh
+./fix-upload-limit.sh</code></pre>
+
+                    <h3>Preview returns 403</h3>
+                    <p>
+                        Check that the preview link has not expired, the content id matches the signed content id, and
+                        <code>PILOT_PREVIEW_SECRET</code> matches between the signer and the frontend.
+                    </p>
+
+                    <h3>Preview iframe is refused</h3>
+                    <p>
+                        If the browser reports that the preview site refused to display in a frame because it set
+                        <code>X-Frame-Options</code> to <code>sameorigin</code>, remove that header from previewable
+                        frontend responses and allow the CMS editor origin with
+                        <code>Content-Security-Policy: frame-ancestors</code>.
+                    </p>
+
+                    <h3>Incontext attributes are missing</h3>
+                    <p>
+                        Confirm <code>PILOT_IN_CONTEXT_ENABLED=true</code> and open the page in an editor context by
+                        using <code>?pilot_editor=1</code>, <code>?editor=1</code>, <code>?pilot_preview=1</code>, an
+                        authenticated session, or a CMS editor referer.
+                    </p>
+
+                    <h3>Incontext updates ignore a field</h3>
+                    <p>
+                        The update endpoint only writes fields that exist in the block type schema. Confirm the field
+                        key in the rendered markup exactly matches the schema key.
+                    </p>
+
+                    <h3>Relative asset URLs point at the wrong host</h3>
+                    <p>
+                        Set <code>PILOT_ASSET_URL</code>. It defaults to <code>PILOT_CMS_URL</code>, which may not be
+                        correct when assets are served from a CDN.
+                    </p>
+                </section>
+
+                <section id="reference">
+                    <h2>Reference</h2>
+
+                    <h3>CMS routes</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Path</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>/admin/dashboard</code></td>
+                                <td>Admin dashboard with CMS metrics and activity.</td>
+                            </tr>
+                            <tr>
+                                <td><code>/admin/content</code></td>
+                                <td>Content tree and content management.</td>
+                            </tr>
+                            <tr>
+                                <td><code>/admin/assets</code></td>
+                                <td>Asset library and upload management.</td>
+                            </tr>
+                            <tr>
+                                <td><code>/admin/datasources</code></td>
+                                <td>Reusable datasource entries.</td>
+                            </tr>
+                            <tr>
+                                <td><code>/admin/users</code></td>
+                                <td>User and role administration.</td>
+                            </tr>
+                            <tr>
+                                <td><code>/admin/settings</code></td>
+                                <td>CMS settings for defaults and delivery behavior.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Delivery API</h3>
+                    <pre><code class="language-http">GET /api/v1/spaces/{space}/contents?locale=en&amp;version=published
+GET /api/v1/spaces/{space}/contents/{slug}?locale=en&amp;version=published
+GET /api/v1/spaces/{space}/contents/{slug}?locale=en&amp;version=draft
+GET /api/v1/preview/{content}?signature=...&amp;expires=...
+POST /api/v1/preview/render</code></pre>
+
+                    <h3>Connector routes</h3>
+                    <pre><code class="language-http">GET   /_pilot/preview/{content}
+GET   /_pilot/in-context/contents/{content}/sync
+GET   /_pilot/in-context/blocks/{block}
+PATCH /_pilot/in-context/blocks/{block}</code></pre>
+
+                    <h3>Connector config file</h3>
+                    <p>
+                        Publishable package config:
+                        <code>packages/pilot-laravel/config/pilot.php</code>
+                    </p>
+
+                    <h3>Important package classes</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Class</th>
+                                <th>Responsibility</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>Pilot\Laravel\PilotServiceProvider</code></td>
+                                <td>Registers config, views, routes, publishes, and the <code>pilot</code> singleton.</td>
+                            </tr>
+                            <tr>
+                                <td><code>Pilot\Laravel\Support\PilotManager</code></td>
+                                <td>Provides access to content queries, renderer, and preview URL support.</td>
+                            </tr>
+                            <tr>
+                                <td><code>Pilot\Laravel\Support\InContext</code></td>
+                                <td>Determines Incontext availability and emits editable field attributes.</td>
+                            </tr>
+                            <tr>
+                                <td><code>Pilot\Laravel\Http\Controllers\InContextBlockController</code></td>
+                                <td>Handles block reads, content sync, and field updates for Incontext editing.</td>
+                            </tr>
+                            <tr>
+                                <td><code>Pilot\Laravel\Http\Middleware\EnsureValidPilotPreview</code></td>
+                                <td>Protects package preview routes.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="divider"></div>
+
+                    <p class="muted">
+                        These docs are intentionally static and deployment-friendly. They can be served directly from
+                        <code>/docs/</code> by any web server that exposes Laravel's <code>public</code> directory.
+                    </p>
+                </section>
+            </article>
+        </main>
+    </div>
+</body>
+</html>

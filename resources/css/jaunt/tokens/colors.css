@@ -1,0 +1,244 @@
+/* ==========================================================================
+   Jaunt — Color System
+   --------------------------------------------------------------------------
+   ONE palette: the Jaunt spectrum, plus the neutral ramp. Nothing else.
+
+   Two layers:
+     1. PRIMITIVES  — the spectrum + neutral scales. Never reference these
+                      directly in product UI.
+     2. SEMANTIC    — role-based aliases (--surface-*, --text-*, --border-*).
+                      Always build components against these.
+
+   Roles
+     Primary / interactive → system BLUE
+     AI                    → system INDIGO (never used for anything else)
+     Success               → system GREEN
+     Warning               → system YELLOW
+     Danger                → system RED
+     Info                  → system CYAN
+
+   Dark theme is Jaunt's native environment (the app runs dark by default);
+   light theme is a first-class peer. Toggle by setting data-theme on <html>.
+   ========================================================================== */
+
+:root {
+  /* ---- PRIMITIVES : Neutral (slightly WARM, paper-like) -----------------
+     Warm neutrals read softer and less clinical than cool "software" grays,
+     and they are what makes a near-monochrome interface feel calm rather
+     than cold. Everything else in the system is measured against these. --- */
+  --gray-0:    #ffffff;
+  --gray-25:   #fdfdfc;
+  --gray-50:   #fafaf9;
+  --gray-100:  #f5f5f4;
+  --gray-150:  #efeeec;
+  --gray-200:  #e7e5e4;
+  --gray-300:  #d6d3d1;
+  --gray-400:  #a8a29e;
+  --gray-500:  #78716c;
+  --gray-600:  #57534e;
+  --gray-700:  #44403c;
+  --gray-800:  #292524;
+  --gray-850:  #221f1d;
+  --gray-900:  #1c1917;
+  --gray-950:  #12100e;
+  --gray-1000: #0c0a09;
+
+  /* ---- PRIMITIVES : The Jaunt spectrum ----------------------------------
+     Three values per hue, one for each job:
+       -dark  = dark-appearance value (bright, for dark surfaces)
+       -base  = light-appearance value (the canonical colour)
+       -deep  = accessible / high-contrast value (text on light)
+     ---------------------------------------------------------------------- */
+  --sys-red-dark:     #ff453a;  --sys-red-base:     #ff3b30;  --sys-red-deep:     #d70015;
+  --sys-orange-dark:  #ff9f0a;  --sys-orange-base:  #ff9500;  --sys-orange-deep:  #c93400;
+  --sys-yellow-dark:  #ffd60a;  --sys-yellow-base:  #ffcc00;  --sys-yellow-deep:  #a05a00;
+  --sys-green-dark:   #30d158;  --sys-green-base:   #34c759;  --sys-green-deep:   #248a3d;
+  --sys-mint-dark:    #63e6e2;  --sys-mint-base:    #00c7be;  --sys-mint-deep:    #0c817b;
+  --sys-teal-dark:    #40cbe0;  --sys-teal-base:    #30b0c7;  --sys-teal-deep:    #147d94;
+  --sys-cyan-dark:    #64d2ff;  --sys-cyan-base:    #32ade6;  --sys-cyan-deep:    #0071a4;
+  --sys-blue-dark:    #0a84ff;  --sys-blue-base:    #007aff;  --sys-blue-deep:    #0040dd;
+  --sys-indigo-dark:  #5e5ce6;  --sys-indigo-base:  #5856d6;  --sys-indigo-deep:  #3634a3;
+  --sys-purple-dark:  #bf5af2;  --sys-purple-base:  #af52de;  --sys-purple-deep:  #8944ab;
+  --sys-pink-dark:    #ff375f;  --sys-pink-base:    #ff2d55;  --sys-pink-deep:    #d30f45;
+  --sys-brown-dark:   #ac8e68;  --sys-brown-base:   #a2845e;  --sys-brown-deep:   #7f6545;
+  --sys-gray-dark:    #98989d;  --sys-gray-base:    #8e8e93;  --sys-gray-deep:    #6c6c70;
+
+  /* ---- PRIMITIVES : Blue ramp — BRAND -----------------------------------
+     The spectrum carries three steps per hue; a UI also needs tints for
+     subtle fills and shades for hover/active. 400/500/700 are the spectrum
+     values, the rest are tints and shades of the same hue. ---------------- */
+  --blue-50:   #e8f2ff;
+  --blue-100:  #d1e6ff;
+  --blue-200:  #a3ccff;
+  --blue-300:  #6bb0ff;
+  --blue-400:  var(--sys-blue-dark);   /* #0a84ff */
+  --blue-500:  var(--sys-blue-base);   /* #007aff — canonical primary */
+  --blue-600:  #0069e0;
+  --blue-700:  var(--sys-blue-deep);   /* #0040dd */
+  --blue-800:  #00318f;
+  --blue-900:  #002563;
+
+  /* ---- PRIMITIVES : Indigo ramp — AI ONLY ------------------------------- */
+  --indigo-50:   #eeeefc;
+  --indigo-100:  #dedefa;
+  --indigo-200:  #c0bff4;
+  --indigo-300:  #9d9bec;
+  --indigo-400:  var(--sys-indigo-dark);  /* #5e5ce6 */
+  --indigo-500:  var(--sys-indigo-base);  /* #5856d6 */
+  --indigo-600:  #4a48c4;
+  --indigo-700:  var(--sys-indigo-deep);  /* #3634a3 */
+  --indigo-800:  #2a2880;
+  --indigo-900:  #1d1c5c;
+
+  /* ---- PRIMITIVES : Status hues (three steps each) ---------------------- */
+  --green-400:  var(--sys-green-dark);   --green-500:  var(--sys-green-base);   --green-600:  var(--sys-green-deep);
+  --yellow-400: var(--sys-yellow-dark);  --yellow-500: var(--sys-yellow-base);  --yellow-600: var(--sys-yellow-deep);
+  --red-400:    var(--sys-red-dark);     --red-500:    var(--sys-red-base);     --red-600:    var(--sys-red-deep);
+  --cyan-400:   var(--sys-cyan-dark);    --cyan-500:   var(--sys-cyan-base);    --cyan-600:   var(--sys-cyan-deep);
+
+  /* ---- PRIMITIVES : Data-viz categorical ------------------------------
+     Drawn from the spectrum, ordered for maximum adjacent separation.
+     Deliberately does NOT start on accent blue: a single-series chart drawn
+     in the accent colour reads as a wall of interactive elements and dilutes
+     "blue = actionable". Blue appears at viz-6, and --viz-highlight is the
+     one way to intentionally pull a series up to accent. ------------------ */
+  --viz-1: var(--sys-teal-base);    --viz-2: var(--sys-orange-base);  --viz-3: var(--sys-purple-base);
+  --viz-4: var(--sys-green-base);   --viz-5: var(--sys-pink-base);    --viz-6: var(--sys-blue-base);
+  --viz-7: var(--sys-mint-base);    --viz-8: var(--sys-gray-base);
+  --viz-highlight: var(--sys-blue-base);
+}
+
+/* ==========================================================================
+   LIGHT THEME  (default)
+   ========================================================================== */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Surfaces — stacked from page floor up to floating elements */
+  --surface-app:      var(--gray-100);   /* the warm stage cards sit on */
+  --surface-sunken:   var(--gray-150);   /* wells, insets, track backgrounds */
+  --surface-card:     var(--gray-0);     /* panels, cards, table body */
+  --surface-raised:   var(--gray-0);     /* menus, popovers, dialogs */
+  --surface-overlay:  rgba(28, 25, 23, 0.32); /* scrim behind modals */
+  --surface-hover:    rgba(28, 25, 23, 0.04);
+  --surface-active:   rgba(28, 25, 23, 0.07);
+  /* Selection is carried by --border-selected (a dark ring), not by colour.
+     This fill only separates the chosen item from its neighbours. */
+  --surface-selected: var(--gray-150);
+
+  /* Text */
+  --text-primary:    var(--gray-900);
+  --text-secondary:  var(--gray-600);
+  --text-tertiary:   var(--gray-500);
+  --text-disabled:   var(--gray-400);
+  --text-on-accent:  var(--gray-0);
+  --text-link:       var(--blue-700);
+
+  /* Borders / lines — alpha, not solid, so they sit on any surface.
+     --border-subtle is the card outline: barely there (black at 5%). */
+  --border-subtle:   rgba(0, 0, 0, 0.05);
+  --border-default:  rgba(0, 0, 0, 0.09);
+  --border-strong:   rgba(0, 0, 0, 0.16);
+  --border-focus:    var(--blue-500);
+  --border-selected: var(--gray-900);   /* the dark ring that marks a choice */
+
+  /* Accent = THE PRIMARY ACTION, and it is ink, not a hue. A near-black
+     button is unambiguous, never competes with status colour, and keeps the
+     interface monochrome so content carries the colour. */
+  --accent:          var(--gray-900);
+  --accent-hover:    var(--gray-800);
+  --accent-active:   var(--gray-700);
+  --accent-subtle:   var(--gray-100);
+  --accent-subtle-hover: var(--gray-150);
+  --accent-text:     var(--gray-900);
+  --accent-border:   var(--gray-300);
+
+  /* Brand blue — demoted on purpose. Links, focus rings and data only;
+     never a button fill. */
+  --brand:           var(--blue-500);
+  --brand-hover:     var(--blue-600);
+  --brand-text:      var(--blue-700);
+  --brand-subtle:    var(--blue-50);
+  --brand-border:    var(--blue-200);
+
+  /* AI — system indigo, always the same signal across the product */
+  --ai-accent:       var(--indigo-500);
+  --ai-text:         var(--indigo-700);
+  --ai-subtle:       var(--indigo-50);
+  --ai-border:       var(--indigo-200);
+  --ai-glow:         rgba(88, 86, 214, 0.16);
+
+  /* Status */
+  /* Saturated values are FOREGROUND tokens — text, icons, dots, bars. The
+     -subtle grounds are warm-derived so they sit on the warm neutral ramp
+     instead of reading as a cool patch on it. There is no solid-fill variant. */
+  --success:      var(--green-600);   --success-subtle: #e9f5e7;  --success-border: #bfe0b8;
+  --warning:      var(--yellow-600);  --warning-subtle: #fbf3dd;  --warning-border: #ebd9a6;
+  --danger:       var(--red-600);     --danger-subtle:  #fceae5;  --danger-border:  #f2c7bb;
+  --info:         var(--cyan-600);    --info-subtle:    #e7f2f7;  --info-border:    #bdd8e4;
+
+  /* Focus ring (used as box-shadow spread) */
+  --ring: 0 0 0 3px rgba(0, 122, 255, 0.32);
+  --ring-ai: 0 0 0 3px rgba(88, 86, 214, 0.30);
+  --ring-danger: 0 0 0 3px rgba(255, 59, 48, 0.30);
+}
+
+/* ==========================================================================
+   DARK THEME  (native)
+   ========================================================================== */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --surface-app:      var(--gray-1000);
+  --surface-sunken:   #0a0908;
+  --surface-card:     var(--gray-800);   /* warm stone, not black */
+  --surface-raised:   var(--gray-850);
+  --surface-overlay:  rgba(0, 0, 0, 0.58);
+  --surface-hover:    rgba(255, 255, 255, 0.05);
+  --surface-active:   rgba(255, 255, 255, 0.09);
+  --surface-selected: rgba(255, 255, 255, 0.08);
+
+  --text-primary:    #f5f5f4;
+  --text-secondary:  #a8a29e;
+  --text-tertiary:   #857f7a;
+  --text-disabled:   #5f5853;
+  --text-on-accent:  var(--gray-900);
+  --text-link:       var(--blue-300);
+
+  --border-subtle:   rgba(255, 255, 255, 0.10);
+  --border-default:  rgba(255, 255, 255, 0.14);
+  --border-strong:   rgba(255, 255, 255, 0.22);
+  --border-focus:    var(--blue-400);
+  --border-selected: var(--gray-50);
+
+  /* On dark, ink inverts: the primary action becomes near-white. */
+  --accent:          var(--gray-50);
+  --accent-hover:    #ffffff;
+  --accent-active:   var(--gray-200);
+  --accent-subtle:   rgba(255, 255, 255, 0.08);
+  --accent-subtle-hover: rgba(255, 255, 255, 0.13);
+  --accent-text:     var(--gray-50);
+  --accent-border:   rgba(255, 255, 255, 0.22);
+
+  --brand:           var(--blue-400);
+  --brand-hover:     var(--blue-300);
+  --brand-text:      var(--blue-300);
+  --brand-subtle:    rgba(10, 132, 255, 0.18);
+  --brand-border:    rgba(10, 132, 255, 0.40);
+
+  --ai-accent:       var(--indigo-400);
+  --ai-text:         var(--indigo-300);
+  --ai-subtle:       rgba(94, 92, 230, 0.18);
+  --ai-border:       rgba(94, 92, 230, 0.40);
+  --ai-glow:         rgba(94, 92, 230, 0.26);
+
+  --success:      var(--green-400);   --success-subtle: rgba(48, 209, 88, 0.16);   --success-border: rgba(48, 209, 88, 0.36);
+  --warning:      var(--yellow-400);  --warning-subtle: rgba(255, 214, 10, 0.16);  --warning-border: rgba(255, 214, 10, 0.36);
+  --danger:       var(--red-400);     --danger-subtle:  rgba(255, 69, 58, 0.16);   --danger-border:  rgba(255, 69, 58, 0.36);
+  --info:         var(--cyan-400);    --info-subtle:    rgba(100, 210, 255, 0.16); --info-border:    rgba(100, 210, 255, 0.36);
+
+  --ring: 0 0 0 3px rgba(10, 132, 255, 0.36);
+  --ring-ai: 0 0 0 3px rgba(94, 92, 230, 0.34);
+  --ring-danger: 0 0 0 3px rgba(255, 69, 58, 0.32);
+}

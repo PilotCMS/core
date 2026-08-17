@@ -32,18 +32,15 @@ class UpdatePilot extends Command
             return self::FAILURE;
         }
 
-        if ($this->runStep([PHP_BINARY, 'artisan', 'migrate', '--force'], 'Running database migrations') !== self::SUCCESS) {
+        $finalize = [PHP_BINARY, 'artisan', 'pilot:finalize-update'];
+
+        if ($this->option('no-build')) {
+            $finalize[] = '--no-build';
+        }
+
+        if ($this->runStep($finalize, 'Finalizing Pilot update') !== self::SUCCESS) {
             return self::FAILURE;
         }
-
-        if (! $this->option('no-build') && file_exists(base_path('package.json'))) {
-            if ($this->runStep(['npm', 'run', 'build'], 'Building frontend assets') !== self::SUCCESS) {
-                return self::FAILURE;
-            }
-        }
-
-        $this->newLine();
-        $this->info('Pilot is up to date.');
 
         return self::SUCCESS;
     }

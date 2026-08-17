@@ -1,0 +1,68 @@
+/* ==========================================================================
+   Jaunt — Typography
+   Family: Geist (UI + display), Geist Mono (data, IDs, code, tabular numbers).
+   Scale is a modular-ish ramp tuned for dense product UI: small steps down
+   low, larger jumps up top. Line-heights are unitless; letter-spacing tightens
+   as size grows (optical correction for a grotesk).
+   ========================================================================== */
+
+:root {
+  /* Families */
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+               Helvetica, Arial, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", "JetBrains Mono",
+               Menlo, Consolas, monospace;
+  --font-display: var(--font-sans);
+
+  /* Weights */
+  --fw-light:    300; /* @kind font */
+  --fw-regular:  400; /* @kind font */
+  --fw-medium:   500; /* @kind font */
+  --fw-semibold: 600; /* @kind font */
+  --fw-bold:     700; /* @kind font */
+
+  /* Font sizes (px, rem-friendly values) */
+  --text-2xs:  11px;   /* micro labels, table meta, kbd */
+  --text-xs:   12px;   /* secondary labels, badges, captions */
+  --text-sm:   13px;   /* dense UI default — rows, menus, inputs */
+  --text-base: 14px;   /* body default */
+  --text-md:   15px;   /* comfortable reading body */
+  --text-lg:   17px;   /* card titles, section leads */
+  --text-xl:   20px;   /* view titles */
+  --text-2xl:  24px;   /* page headings */
+  --text-3xl:  30px;   /* feature headings */
+  --text-4xl:  38px;   /* marketing / hero */
+  --text-5xl:  52px;   /* display */
+
+  /* Line heights */
+  --lh-none:    1;    /* @kind font */
+  --lh-tight:   1.2;  /* @kind font */
+  --lh-snug:    1.35; /* @kind font */
+  --lh-normal:  1.5;  /* @kind font */
+  --lh-relaxed: 1.65; /* @kind font */
+
+  /* Letter spacing */
+  --ls-tight:   -0.02em;  /* @kind font */
+  --ls-snug:    -0.011em; /* @kind font */
+  --ls-normal:  0;        /* @kind font */
+  --ls-wide:    0.02em;   /* @kind font */
+  --ls-caps:    0.06em;   /* @kind font */
+
+  /* ---- Semantic type roles (shorthand: weight / size / line-height) ----- */
+  --type-display:   var(--fw-semibold) var(--text-5xl)/var(--lh-tight) var(--font-display);
+  --type-h1:        var(--fw-semibold) var(--text-3xl)/var(--lh-tight) var(--font-sans);
+  --type-h2:        var(--fw-semibold) var(--text-2xl)/var(--lh-tight) var(--font-sans);
+  --type-h3:        var(--fw-semibold) var(--text-xl)/var(--lh-snug) var(--font-sans);
+  --type-title:     var(--fw-medium)   var(--text-lg)/var(--lh-snug) var(--font-sans);
+  --type-body:      var(--fw-regular)  var(--text-base)/var(--lh-normal) var(--font-sans);
+  --type-body-sm:   var(--fw-regular)  var(--text-sm)/var(--lh-normal) var(--font-sans);
+  --type-label:     var(--fw-medium)   var(--text-sm)/var(--lh-snug) var(--font-sans);
+  --type-caption:   var(--fw-regular)  var(--text-xs)/var(--lh-snug) var(--font-sans);
+  --type-2xs:       var(--fw-regular)  var(--text-2xs)/var(--lh-snug) var(--font-sans);
+  --type-mono:      var(--fw-regular)  var(--text-sm)/var(--lh-normal) var(--font-mono);
+
+  /* Group/section label inside nav + list surfaces (sidebar groups, menu
+     labels, command-palette groups). Always paired with uppercase +
+     --ls-caps + --text-tertiary. One token so all four stay in sync. */
+  --type-group-label: var(--fw-medium) var(--text-2xs)/var(--lh-snug) var(--font-sans);
+}

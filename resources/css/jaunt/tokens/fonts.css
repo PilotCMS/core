@@ -1,0 +1,8 @@
+/* ==========================================================================
+   Jaunt — Fonts
+   Geist Sans (UI + display) and Geist Mono (data, code, numerics).
+   Loaded from Google Fonts. If self-hosting, drop the .woff2 files into
+   /assets/fonts and swap the @import for local @font-face rules.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');

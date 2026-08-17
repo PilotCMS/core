@@ -1,0 +1,9 @@
+<div
+    id="pilot-toast-region"
+    class="pilot-toast-region"
+    role="region"
+    aria-label="Notifications"
+    aria-live="polite"
+    aria-relevant="additions"
+    data-session-toast='@json(session('toast'))'
+></div>
