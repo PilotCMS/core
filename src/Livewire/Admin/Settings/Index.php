@@ -131,7 +131,10 @@ class Index extends Component
     {
         return view('livewire.admin.settings.index', [
             'spaces' => Space::query()->orderBy('name')->get(),
-            'settings' => CmsSetting::query()->orderBy('key')->get(),
+            'settings' => CmsSetting::query()
+                ->whereNotIn('key', ['preview_secret'])
+                ->orderBy('key')
+                ->get(),
         ])
             ->layout('layouts.admin');
     }
