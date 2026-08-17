@@ -101,7 +101,7 @@ class UpdatePilot extends Command
 
         $this->components->task($label, function () use ($command, &$successful): void {
             $process = new Process($command, base_path(), timeout: null);
-            $process->setTty(Process::isTtySupported());
+            $process->setTty(Process::isTtySupported() && $this->output->isDecorated());
             $successful = $process->run(function (string $type, string $output): void {
                 $this->output->write($output);
             }) === 0;
