@@ -10,7 +10,7 @@
                 <div class="auth-brand-glow auth-brand-glow-top" aria-hidden="true"></div>
                 <div class="auth-brand-glow auth-brand-glow-bottom" aria-hidden="true"></div>
 
-                <a href="{{ route('home') }}" class="auth-brand" wire:navigate>
+                <a href="{{ url('/') }}" class="auth-brand" wire:navigate>
                     <span class="auth-brand-mark">
                         <img src="{{ asset('img/logo.svg') }}" alt="" />
                     </span>
@@ -57,7 +57,7 @@
 
             <section class="auth-form-panel">
                 <div class="auth-mobile-brand">
-                    <a href="{{ route('home') }}" class="auth-brand" wire:navigate>
+                    <a href="{{ url('/') }}" class="auth-brand" wire:navigate>
                         <span class="auth-brand-mark">
                             <img src="{{ asset('img/logo.svg') }}" alt="" />
                         </span>

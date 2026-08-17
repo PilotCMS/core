@@ -2,7 +2,9 @@
 
 namespace Pilot\Core\Support\Updates;
 
+use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -186,6 +188,24 @@ class PilotUpdateSafety
         }
 
         return 'Health URL responded successfully';
+    }
+
+    public function checkApplicationResponse(): string
+    {
+        $path = (string) config('cms.updates.health_path', '/login');
+        $kernel = app(HttpKernel::class);
+        $request = Request::create('/'.ltrim($path, '/'), 'GET');
+        $response = $kernel->handle($request);
+
+        try {
+            if ($response->getStatusCode() >= 400) {
+                throw new RuntimeException("The internal post-update health check returned HTTP {$response->getStatusCode()} for {$path}.");
+            }
+        } finally {
+            $kernel->terminate($request, $response);
+        }
+
+        return "Internal health path {$path} responded successfully";
     }
 
     private function assertDatabaseBackupSupported(): void

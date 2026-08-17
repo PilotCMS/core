@@ -60,6 +60,7 @@ class RunPilotUpdateInBackground extends Command
                 $this->runArtisan(['up'], $manager, 'Pilot could not leave maintenance mode.');
             }
 
+            $checks[] = $safety->checkApplicationResponse();
             $urlCheck = $safety->checkHealthUrl();
 
             if ($urlCheck !== null) {

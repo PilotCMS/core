@@ -21,6 +21,7 @@ return [
         'backup_retention' => (int) env('PILOT_UPDATE_BACKUP_RETENTION', 3),
         'minimum_free_mb' => (int) env('PILOT_UPDATE_MINIMUM_FREE_MB', 512),
         'maintenance_mode' => env('PILOT_UPDATE_MAINTENANCE_MODE', true),
+        'health_path' => env('PILOT_UPDATE_HEALTH_PATH', '/login'),
         'health_url' => env('PILOT_UPDATE_HEALTH_URL'),
         'health_timeout' => (int) env('PILOT_UPDATE_HEALTH_TIMEOUT', 15),
     ],
