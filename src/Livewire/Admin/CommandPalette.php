@@ -5,7 +5,9 @@ namespace Pilot\Core\Livewire\Admin;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Livewire\Component;
+use Pilot\Core\Extensions\ExtensionRegistry;
 use Pilot\Core\Models\Asset;
 use Pilot\Core\Models\BlockType;
 use Pilot\Core\Models\Content;
@@ -41,6 +43,7 @@ class CommandPalette extends Component
             $this->datasourceResults($term),
             $this->spaceResults($term),
             $this->userResults($term),
+            ...$this->extensionCommandGroups($term),
         ])
             ->filter(fn (array $group): bool => $group['results'] !== [])
             ->values()
@@ -72,11 +75,56 @@ class CommandPalette extends Component
             $admin[] = $this->result('Users', 'Manage accounts, roles, and permissions', route('admin.users.index'), 'users');
         }
 
-        return collect([
+        $groups = collect([
             ['label' => 'Go to', 'results' => $workspace],
             ['label' => 'Admin', 'results' => $admin],
-        ])
+        ])->keyBy('label');
+
+        foreach ($this->extensionCommandGroups() as $extensionGroup) {
+            $existing = $groups->get($extensionGroup['label'], [
+                'label' => $extensionGroup['label'],
+                'results' => [],
+            ]);
+            $existing['results'] = array_merge($existing['results'], $extensionGroup['results']);
+            $groups->put($extensionGroup['label'], $existing);
+        }
+
+        return $groups
             ->filter(fn (array $group): bool => $group['results'] !== [])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{label: string, results: array<int, array{title: string, description: string, url: string, icon: string}>}>
+     */
+    protected function extensionCommandGroups(?string $term = null): array
+    {
+        return collect(app(ExtensionRegistry::class)->commandPaletteItems())
+            ->filter(fn (array $item): bool => ! isset($item['can']) || (auth()->user()?->can($item['can']) ?? false))
+            ->filter(function (array $item) use ($term): bool {
+                if ($term === null || $term === '') {
+                    return true;
+                }
+
+                return Str::contains(
+                    Str::lower($item['title'].' '.$item['description']),
+                    Str::lower($term),
+                );
+            })
+            ->groupBy('group')
+            ->map(fn (Collection $items, string $group): array => [
+                'label' => $group,
+                'results' => $items
+                    ->map(fn (array $item): array => $this->result(
+                        $item['title'],
+                        $item['description'],
+                        route($item['route']),
+                        $item['icon'],
+                    ))
+                    ->values()
+                    ->all(),
+            ])
             ->values()
             ->all();
     }

@@ -1,4 +1,6 @@
 @php
+    $extensionRegistry = app(\Pilot\Core\Extensions\ExtensionRegistry::class);
+
     $workspaceItems = [
         ['route' => 'admin.dashboard', 'active' => 'admin.dashboard', 'icon' => 'layout-dashboard', 'label' => 'Dashboard'],
         ['route' => 'admin.content.index', 'active' => 'admin.content.*', 'icon' => 'files', 'label' => 'Content'],
@@ -7,12 +9,14 @@
         ['route' => 'admin.content-types.index', 'active' => 'admin.content-types.*', 'icon' => 'panels-top-left', 'label' => 'Content types'],
         ['route' => 'admin.datasources.index', 'active' => 'admin.datasources.*', 'icon' => 'database', 'label' => 'Datasources'],
     ];
+    $workspaceItems = array_merge($workspaceItems, $extensionRegistry->navigationItems('workspace'));
 
     $adminItems = [
         ['route' => 'admin.spaces.index', 'active' => 'admin.spaces.*', 'icon' => 'layers-3', 'label' => 'Spaces'],
         ['route' => 'admin.users.index', 'active' => 'admin.users.*', 'icon' => 'users', 'label' => 'Users', 'can' => 'manage users'],
         ['route' => 'admin.settings.index', 'active' => 'admin.settings.*', 'icon' => 'settings', 'label' => 'Settings'],
     ];
+    $adminItems = array_merge($adminItems, $extensionRegistry->navigationItems('admin'));
 
     $navLinkClasses = function (string $activePattern): string {
         $base = 'cms-nav-item group flex items-center gap-2 px-[9px] text-[13px] leading-[19.5px] tracking-[-0.154px] transition-colors duration-100';
@@ -57,6 +61,7 @@
         </button>
         <div x-show="workspaceOpen" class="px-2">
             @foreach ($workspaceItems as $item)
+                @continue(isset($item['can']) && auth()->user()->cannot($item['can']))
                 @php $isActive = request()->routeIs($item['active']); @endphp
                 <a href="{{ route($item['route']) }}" class="{{ $navLinkClasses($item['active']) }}" wire:navigate>
                     <x-jaunt.icon :name="$item['icon']" size="sm" class="!h-[15px] !w-[15px] {{ $isActive ? 'text-primary' : 'text-tertiary group-hover:text-secondary' }}" />

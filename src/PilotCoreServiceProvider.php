@@ -23,6 +23,7 @@ use Pilot\Core\Console\Commands\PublishScheduledContent;
 use Pilot\Core\Console\Commands\RunPilotUpdateInBackground;
 use Pilot\Core\Console\Commands\SyncPilotHost;
 use Pilot\Core\Console\Commands\UpdatePilot;
+use Pilot\Core\Extensions\ExtensionRegistry;
 use Pilot\Core\Livewire\Admin\Assets\AssetPickerModal;
 use Pilot\Core\Livewire\Admin\Assets\Index;
 use Pilot\Core\Livewire\Admin\Blocks\Create;
@@ -39,6 +40,8 @@ class PilotCoreServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(ExtensionRegistry::class);
+
         $this->app['config']->set('cms', require __DIR__.'/../config/cms.php');
         $this->app['config']->set('installation', require __DIR__.'/../config/installation.php');
         $this->app['config']->set('fortify', require __DIR__.'/../config/fortify.php');

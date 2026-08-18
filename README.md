@@ -6,6 +6,10 @@ The `PilotCMS/Pilot` repository is a thin Laravel host. Product functionality be
 
 Applications should install Pilot through the `pilot` installer rather than requiring this package directly.
 
+## Extensions
+
+First-party and third-party packages can add administration links, command-palette entries, and page titles without replacing Pilot's built-in application surface. See the [extension authoring guide](docs/extensions.md) for the supported API and a complete service-provider example.
+
 ## Updating
 
 From an existing Pilot project:
