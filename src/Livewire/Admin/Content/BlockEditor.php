@@ -2,6 +2,7 @@
 
 namespace Pilot\Core\Livewire\Admin\Content;
 
+use JsonException;
 use Livewire\Component;
 use Pilot\Core\Models\BlockType;
 use Pilot\Core\Models\Content;
@@ -144,6 +145,28 @@ class BlockEditor extends Component
         $items[$index][$objectKey] = $value;
         $this->data[$key] = $items;
         $this->dispatch('block-updated', $this->block['id'], $key, $items);
+    }
+
+    public function updateJsonObjectFieldFromJson(string $key, int $index, string $objectKey, string $value): void
+    {
+        $errorKey = "jsonObject.{$key}.{$index}.{$objectKey}";
+
+        try {
+            $decodedValue = json_decode($value, true, flags: JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            $this->addError($errorKey, 'Enter valid JSON.');
+
+            return;
+        }
+
+        if (! is_array($decodedValue)) {
+            $this->addError($errorKey, 'The JSON value must be an array or object.');
+
+            return;
+        }
+
+        $this->resetErrorBag($errorKey);
+        $this->updateJsonObjectField($key, $index, $objectKey, $decodedValue);
     }
 
     protected function dispatchRepeaterExpansionUpdated(string $key): void

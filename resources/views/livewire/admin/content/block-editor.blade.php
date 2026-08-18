@@ -23,12 +23,26 @@
                             <div class="mb-3 text-[10px] font-bold uppercase tracking-wide text-slate-400">Item {{ $idx + 1 }}</div>
                             <div class="space-y-3">
                                 @foreach($objectKeys as $objectKey)
+                                    @php
+                                        $objectValue = $item[$objectKey] ?? '';
+                                        $objectValueIsArray = is_array($objectValue);
+                                    @endphp
                                     <div>
                                         <label class="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">{{ $objectKey }}</label>
-                                        <textarea rows="{{ $objectKey === 'body' ? 3 : 1 }}"
-                                            wire:change="updateJsonObjectField(@js($field['key']), {{ $idx }}, @js($objectKey), $event.target.value)"
-                                            class="w-full min-h-9 rounded-lg border border-slate-200 bg-white p-2.5 text-sm text-slate-700 shadow-sm outline-none transition-[border-color,box-shadow,background-color] duration-fast focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                        >{{ $item[$objectKey] ?? '' }}</textarea>
+                                        @if($objectValueIsArray)
+                                            <textarea rows="6"
+                                                wire:change="updateJsonObjectFieldFromJson(@js($field['key']), {{ $idx }}, @js($objectKey), $event.target.value)"
+                                                class="w-full min-h-9 rounded-lg border border-slate-200 bg-white p-2.5 font-mono text-xs text-slate-700 shadow-sm outline-none transition-[border-color,box-shadow,background-color] duration-fast focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                            >{{ json_encode($objectValue, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</textarea>
+                                            @error("jsonObject.{$field['key']}.{$idx}.{$objectKey}")
+                                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        @else
+                                            <textarea rows="{{ $objectKey === 'body' ? 3 : 1 }}"
+                                                wire:change="updateJsonObjectField(@js($field['key']), {{ $idx }}, @js($objectKey), $event.target.value)"
+                                                class="w-full min-h-9 rounded-lg border border-slate-200 bg-white p-2.5 text-sm text-slate-700 shadow-sm outline-none transition-[border-color,box-shadow,background-color] duration-fast focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                            >{{ $objectValue }}</textarea>
+                                        @endif
                                     </div>
                                 @endforeach
                             </div>
