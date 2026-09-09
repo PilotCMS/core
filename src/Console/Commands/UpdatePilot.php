@@ -3,6 +3,7 @@
 namespace Pilot\Core\Console\Commands;
 
 use Illuminate\Console\Command;
+use Pilot\Core\Support\Updates\PilotUpdateManager;
 use Symfony\Component\Process\Process;
 
 class UpdatePilot extends Command
@@ -15,7 +16,7 @@ class UpdatePilot extends Command
 
     protected $description = 'Update Pilot Core and run its post-update steps';
 
-    public function handle(): int
+    public function handle(PilotUpdateManager $manager): int
     {
         if (! $this->option('force') && $this->composerFilesAreDirty()) {
             $this->error('composer.json or composer.lock has uncommitted changes. Commit them or use --force.');
@@ -41,6 +42,10 @@ class UpdatePilot extends Command
 
         if ($this->runStep($finalize, 'Finalizing Pilot update') !== self::SUCCESS) {
             return self::FAILURE;
+        }
+
+        if (! $this->option('force')) {
+            $manager->markComposerFilesAsUpdaterOwned();
         }
 
         return self::SUCCESS;
