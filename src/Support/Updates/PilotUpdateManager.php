@@ -7,6 +7,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Symfony\Component\Process\PhpExecutableFinder;
 use Symfony\Component\Process\Process;
 
 class PilotUpdateManager
@@ -28,6 +29,12 @@ class PilotUpdateManager
 
         if (! is_array($state)) {
             return ['status' => 'idle', 'message' => null];
+        }
+
+        if (($state['status'] ?? null) === 'queued'
+            && isset($state['started_at'])
+            && Carbon::parse($state['started_at'])->addSeconds(30)->isPast()) {
+            return $this->finish(false, 'The updater did not start. Check the launcher log and the configured PHP CLI executable.');
         }
 
         if (in_array($state['status'] ?? null, ['queued', 'running'], true)
@@ -61,6 +68,7 @@ class PilotUpdateManager
 
             $this->assertComposerFilesAreSafe();
 
+            $php = $this->cliPhpBinary();
             $composerFiles = $this->composerHashes();
 
             $state = [
@@ -79,13 +87,15 @@ class PilotUpdateManager
 
             $this->writeState($state);
             $this->files->put($this->logPath(), '');
+            $this->files->put($this->launcherLogPath(), '');
 
             $command = sprintf(
-                'nohup %s %s pilot:update-background --target=%s --initiated-by=%s > /dev/null 2>&1 &',
-                escapeshellarg(PHP_BINARY),
+                'nohup %s %s pilot:update-background --target=%s --initiated-by=%s < /dev/null > %s 2>&1 &',
+                escapeshellarg($php),
                 escapeshellarg($this->basePath('artisan')),
                 escapeshellarg($target),
                 escapeshellarg((string) $initiatedBy),
+                escapeshellarg($this->launcherLogPath()),
             );
             $process = Process::fromShellCommandline($command, $this->basePath(), timeout: 10);
             $process->run();
@@ -159,11 +169,13 @@ class PilotUpdateManager
 
     public function log(): string
     {
-        if (! $this->files->exists($this->logPath())) {
-            return '';
-        }
+        $log = '';
 
-        $log = $this->files->get($this->logPath());
+        foreach ([$this->logPath(), $this->launcherLogPath()] as $path) {
+            if ($this->files->exists($path)) {
+                $log .= $this->files->get($path);
+            }
+        }
 
         return mb_substr(preg_replace('/\e\[[\d;]*m/', '', $log) ?? $log, -12000);
     }
@@ -278,6 +290,30 @@ class PilotUpdateManager
         $this->files->ensureDirectoryExists(dirname($path));
 
         return $path;
+    }
+
+    private function launcherLogPath(): string
+    {
+        return $this->storagePath('logs/pilot-update-launcher.log');
+    }
+
+    private function cliPhpBinary(): string
+    {
+        $php = config('cms.updates.php_binary') ?: (new PhpExecutableFinder)->find(false);
+
+        if (! is_string($php) || $php === '' || ! is_executable($php) || is_dir($php)) {
+            throw new RuntimeException('A PHP CLI executable is required. Set PILOT_UPDATE_PHP_BINARY to its absolute path.');
+        }
+
+        $probe = new Process([$php, '-r', 'echo PHP_SAPI."|".PHP_VERSION_ID;'], $this->basePath(), timeout: 10);
+        $probe->run();
+        $result = explode('|', trim($probe->getOutput()));
+
+        if (! $probe->isSuccessful() || ($result[0] ?? '') !== 'cli' || (int) ($result[1] ?? 0) < 80401) {
+            throw new RuntimeException('Pilot updates require PHP CLI 8.4.1 or newer. Check PILOT_UPDATE_PHP_BINARY.');
+        }
+
+        return $php;
     }
 
     private function ownershipPath(): string

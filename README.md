@@ -29,3 +29,7 @@ Updates install Core and its compatible `pilot/laravel` dependency, migrate the 
 ```shell
 php artisan pilot:sync-host
 ```
+
+## Background update PHP
+
+Admin updates resolve and validate a PHP CLI executable before starting. On servers with multiple PHP versions, set `PILOT_UPDATE_PHP_BINARY=/usr/bin/php8.5` (using the installed CLI path). PHP-FPM executables cannot run Artisan updates. Startup output is captured in `storage/logs/pilot-update-launcher.log` and included in the admin update log; a queued update that does not start within 30 seconds is marked failed.

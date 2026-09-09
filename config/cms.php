@@ -28,6 +28,7 @@ return [
     'updates' => [
         'api_url' => env('PILOT_UPDATE_API_URL', 'https://api.github.com/repos/PilotCMS/core/releases/latest'),
         'cache_ttl' => (int) env('PILOT_UPDATE_CACHE_TTL', 3600),
+        'php_binary' => env('PILOT_UPDATE_PHP_BINARY'),
         'self_update' => env('PILOT_SELF_UPDATE', env('APP_ENV', 'production') === 'local'),
         'stale_after' => (int) env('PILOT_UPDATE_STALE_AFTER', 3600),
         'database_backup' => env('PILOT_UPDATE_DATABASE_BACKUP', true),
