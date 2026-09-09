@@ -216,30 +216,6 @@ class SpaceSeeder extends Seeder
         );
 
         // Create datasources
-        $themesDatasource = Datasource::firstOrCreate(
-            [
-                'space_id' => $space->id,
-                'slug' => 'themes',
-            ],
-            ['name' => 'Themes']
-        );
-
-        $themesEntries = [
-            ['key' => 'light', 'value' => ['en' => 'Light'], 'order' => 0],
-            ['key' => 'dark', 'value' => ['en' => 'Dark'], 'order' => 1],
-            ['key' => 'auto', 'value' => ['en' => 'Auto'], 'order' => 2],
-        ];
-
-        foreach ($themesEntries as $entry) {
-            DatasourceEntry::firstOrCreate(
-                [
-                    'datasource_id' => $themesDatasource->id,
-                    'key' => $entry['key'],
-                ],
-                $entry
-            );
-        }
-
         $ctaStylesDatasource = Datasource::firstOrCreate(
             [
                 'space_id' => $space->id,

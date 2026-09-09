@@ -52,18 +52,18 @@
 
 /* Dark — sheets darken and deepen */
 [data-theme="dark"] {
-  --material-ultrathin-bg: rgba(48, 44, 41, 0.55);
-  --material-thin-bg:      rgba(40, 36, 34, 0.68);
-  --material-regular-bg:   rgba(26, 23, 21, 0.78);
-  --material-thick-bg:     rgba(14, 12, 11, 0.90);
-  --material-chrome-bg:    rgba(38, 34, 32, 0.72);
+  --material-ultrathin-bg: rgba(52, 61, 70, 0.55);
+  --material-thin-bg:      rgba(43, 48, 59, 0.68);
+  --material-regular-bg:   rgba(37, 41, 50, 0.78);
+  --material-thick-bg:     rgba(24, 27, 33, 0.90);
+  --material-chrome-bg:    rgba(33, 37, 45, 0.72);
 
   --material-edge:   none; /* @kind shadow */
   --material-hairline: rgba(255, 255, 255, 0.12);
 
   --shadow-window: 0 0 0 0.5px rgba(255, 255, 255, 0.10),
-                   0 12px 28px rgba(0, 0, 0, 0.55),
-                   0 42px 90px rgba(0, 0, 0, 0.70);
+                   0 12px 28px rgba(8, 11, 17, 0.30),
+                   0 42px 90px rgba(8, 11, 17, 0.42);
 }
 
 /* ==========================================================================

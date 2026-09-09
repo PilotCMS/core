@@ -1,24 +1,43 @@
 <div class="cms-shell h-screen w-full relative overflow-hidden selection:bg-accent-subtle selection:text-accent-text">
 <div
     x-data="{
-        rightPanelTab: @entangle('rightPanelTab'),
+        rightPanelTab: @js((string) $rightPanelTab),
         savedJustNow: @entangle('savedJustNow'),
         blockLibraryOpen: @entangle('blockLibraryOpen'),
         selectedBlockId: @entangle('selectedBlockId'),
         canvasMode: 'preview',
         previewDevice: 'desktop',
         previewTargetOrigins: @js($this->previewTargetOrigins),
-        previewFrameSrc: @js($this->previewFrameUrl),
+        previewFrameSources: [@js($this->previewFrameUrl), 'about:blank'],
+        /* ─────────────────────────────────────────────────────────
+         * PREVIEW UPDATE STORYBOARD
+         *
+         *    0ms   refreshed preview loads invisibly behind current frame
+         *   48ms   browser gets two paint frames to render the new document
+         *  268ms   crossfade completes; refreshed frame becomes interactive
+         * ───────────────────────────────────────────────────────── */
+        previewMotion: {
+            paintSettle: 48,
+            crossfade: 220,
+        },
+        previewSwapStage: 0,
+        activePreviewFrameIndex: 0,
+        previewFrameLoadingIndex: null,
+        previewSwapTimer: null,
         previewRefreshTimer: null,
+        previewPatchSequence: 0,
+        pendingPreviewPatches: {},
         pendingPreviewUrl: null,
         pendingPreviewScroll: null,
         pendingPreviewScrollBlockId: null,
         saveState: @entangle('saveState'),
         conflictMessage: @entangle('conflictMessage'),
-        drawerOpen: @entangle('drawerOpen').live,
-        leftSidebarCollapsed: @entangle('leftSidebarCollapsed').live,
+        drawerOpen: @js((bool) $drawerOpen),
+        leftSidebarCollapsed: @js((bool) $leftSidebarCollapsed),
         contentSearch: '',
         expandedFolderIds: @if($content->parent_id) [{{ (int) $content->parent_id }}] @else [] @endif,
+        pendingDeleteBlockId: null,
+        panelsBeforeCollapse: null,
         compactWorkspace: false,
         get inspectorOpen() {
             return this.drawerOpen;
@@ -63,7 +82,7 @@
             this.leftSidebarCollapsed = false;
 
             if (this.compactWorkspace) {
-                this.drawerOpen = false;
+                this.closeInspector();
             }
         },
         openInspector() {
@@ -72,6 +91,45 @@
             if (this.compactWorkspace) {
                 this.leftSidebarCollapsed = true;
             }
+        },
+        closeInspector() {
+            window.dispatchEvent(new CustomEvent('pilot-close-expanded-richtext', {
+                detail: { restoreFocus: false },
+            }));
+            this.drawerOpen = false;
+        },
+        requestBlockDeletion(blockId) {
+            this.pendingDeleteBlockId = Number(blockId);
+        },
+        cancelBlockDeletion() {
+            this.pendingDeleteBlockId = null;
+        },
+        confirmBlockDeletion() {
+            const blockId = this.pendingDeleteBlockId;
+
+            this.pendingDeleteBlockId = null;
+
+            if (blockId) {
+                $wire.call('deleteBlock', blockId);
+            }
+        },
+        togglePanels() {
+            if (this.leftSidebarCollapsed && ! this.drawerOpen) {
+                const previous = this.panelsBeforeCollapse ?? { pagesOpen: true, inspectorOpen: true };
+
+                this.leftSidebarCollapsed = ! previous.pagesOpen;
+                this.drawerOpen = previous.inspectorOpen;
+                this.panelsBeforeCollapse = null;
+
+                return;
+            }
+
+            this.panelsBeforeCollapse = {
+                pagesOpen: ! this.leftSidebarCollapsed,
+                inspectorOpen: this.drawerOpen,
+            };
+            this.leftSidebarCollapsed = true;
+            this.closeInspector();
         },
         previewWidth() {
             const desktopWidth = ! this.drawerOpen && this.leftSidebarCollapsed
@@ -84,15 +142,20 @@
                 mobile: '390px'
             }[this.previewDevice];
         },
+        activePreviewFrame() {
+            return this.activePreviewFrameIndex === 0
+                ? this.$refs.previewFramePrimary
+                : this.$refs.previewFrameSecondary;
+        },
         previewFrameOrigin() {
             try {
-                return new URL(this.$refs.previewFrame?.src || window.location.href).origin;
+                return new URL(this.activePreviewFrame()?.src || window.location.href).origin;
             } catch (error) {
                 return '*';
             }
         },
         postToPreview(message) {
-            const frame = this.$refs.previewFrame;
+            const frame = this.activePreviewFrame();
 
             if (! frame?.contentWindow) {
                 return;
@@ -101,7 +164,7 @@
             frame.contentWindow.postMessage(message, this.previewFrameOrigin());
         },
         applyPreviewSelectionDirectly() {
-            const frame = this.$refs.previewFrame;
+            const frame = this.activePreviewFrame();
 
             try {
                 const doc = frame?.contentDocument;
@@ -152,13 +215,54 @@
             window.setTimeout(() => this.postPreviewSelection(), 500);
         },
         refreshPreviewFrame(url) {
-            if (! url || this.previewFrameSrc === url) {
+            if (! url || this.previewFrameSources[this.activePreviewFrameIndex] === url) {
                 return;
             }
 
             this.pendingPreviewScrollBlockId = this.selectedBlockId ? Number(this.selectedBlockId) : null;
             this.capturePreviewScroll();
-            this.previewFrameSrc = url;
+            const loadingIndex = this.activePreviewFrameIndex === 0 ? 1 : 0;
+
+            this.previewSwapStage = 1;
+            this.previewFrameLoadingIndex = loadingIndex;
+            this.previewFrameSources[loadingIndex] = url;
+        },
+        handlePreviewFrameLoad(index) {
+            if (this.previewFrameLoadingIndex === index) {
+                window.requestAnimationFrame(() => {
+                    window.requestAnimationFrame(() => {
+                        window.setTimeout(() => {
+                            if (this.previewFrameLoadingIndex !== index) {
+                                return;
+                            }
+
+                            this.previewSwapStage = 2;
+                            this.activePreviewFrameIndex = index;
+                            this.previewFrameLoadingIndex = null;
+                            window.clearTimeout(this.previewSwapTimer);
+                            this.previewSwapTimer = window.setTimeout(() => {
+                                this.previewSwapStage = 0;
+                            }, this.previewMotion.crossfade);
+
+                            this.$nextTick(() => {
+                                this.restorePreviewScroll();
+                                this.syncPreviewSelection();
+                            });
+                        }, this.previewMotion.paintSettle);
+                    });
+                });
+
+                return;
+            }
+
+            if (this.activePreviewFrameIndex !== index) {
+                return;
+            }
+
+            this.$nextTick(() => {
+                this.restorePreviewScroll();
+                this.syncPreviewSelection();
+            });
         },
         queuePreviewFrameRefresh(url) {
             if (! url) {
@@ -177,8 +281,39 @@
                 this.pendingPreviewUrl = null;
             }, 700);
         },
+        applyPreviewFieldPatch(event) {
+            const payload = Array.isArray(event) ? event[0] : event;
+            const patchId = ++this.previewPatchSequence;
+            const fallbackUrl = payload?.fallbackUrl;
+            const timer = window.setTimeout(() => {
+                this.finishPreviewFieldPatch(patchId, false);
+            }, 350);
+
+            this.pendingPreviewPatches[patchId] = { fallbackUrl, timer };
+            this.postToPreview({
+                type: 'pilot-preview-field-patch',
+                patchId,
+                blockId: Number(payload?.blockId),
+                fieldKey: payload?.fieldKey,
+                value: payload?.value ?? '',
+            });
+        },
+        finishPreviewFieldPatch(patchId, patched) {
+            const pending = this.pendingPreviewPatches[patchId];
+
+            if (! pending) {
+                return;
+            }
+
+            window.clearTimeout(pending.timer);
+            delete this.pendingPreviewPatches[patchId];
+
+            if (! patched && pending.fallbackUrl) {
+                this.queuePreviewFrameRefresh(pending.fallbackUrl);
+            }
+        },
         previewScrollPosition() {
-            const frame = this.$refs.previewFrame;
+            const frame = this.activePreviewFrame();
 
             try {
                 const frameWindow = frame?.contentWindow;
@@ -212,7 +347,7 @@
             });
 
             try {
-                const doc = this.$refs.previewFrame?.contentDocument;
+                const doc = this.activePreviewFrame()?.contentDocument;
                 const block = doc?.querySelector(`[data-pilot-editable=block][data-pilot-block-id='${targetBlockId}']`);
 
                 if (! block) {
@@ -246,7 +381,7 @@
             this.pendingPreviewScroll = null;
 
             try {
-                this.$refs.previewFrame?.contentWindow?.scrollTo(position.x, position.y);
+                this.activePreviewFrame()?.contentWindow?.scrollTo(position.x, position.y);
             } catch (error) {
                 // Cross-origin preview targets cannot be scrolled directly.
             }
@@ -277,6 +412,10 @@
                 this.queuePreviewFrameRefresh(payload?.url);
             });
 
+            $wire.on('preview-field-patch', (event) => {
+                this.applyPreviewFieldPatch(event);
+            });
+
             $wire.on('preview-selection-sync', (event) => {
                 const payload = Array.isArray(event) ? event[0] : event;
 
@@ -286,6 +425,8 @@
             });
 
             this.$watch('selectedBlockId', () => {
+                this.rightPanelTab = 'content';
+
                 if (this.selectedBlockId) {
                     this.openInspector();
                 }
@@ -319,6 +460,14 @@
                     this.scrollPreviewBlockIntoView();
                 }
 
+                if (event.data?.type === 'pilot-preview-toggle-panels') {
+                    this.togglePanels();
+                }
+
+                if (event.data?.type === 'pilot-preview-field-patched') {
+                    this.finishPreviewFieldPatch(Number(event.data.patchId), Boolean(event.data.patched));
+                }
+
                 if (event.data?.type === 'pilot-preview-select-block' && event.data?.blockId) {
                     this.selectedBlockId = Number(event.data.blockId);
                     this.syncPreviewSelection();
@@ -337,7 +486,9 @@
                     };
 
                     if (actions[event.data.action]) {
-                        if (event.data.action === 'delete' && ! confirm('Delete this block?')) {
+                        if (event.data.action === 'delete') {
+                            this.requestBlockDeletion(event.data.blockId);
+
                             return;
                         }
 
@@ -356,6 +507,11 @@
             });
 
             document.addEventListener('keydown', (e) => {
+                if ((e.metaKey || e.ctrlKey) && (e.code === 'Backslash' || e.key === '\\')) {
+                    e.preventDefault();
+                    this.togglePanels();
+                }
+
                 if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
                     e.preventDefault();
                     this.blockLibraryOpen = true;
@@ -369,6 +525,7 @@
         }
     }"
     class="contents"
+    aria-keyshortcuts="Meta+\ Control+\"
 >
     <livewire:admin.content.content-sync-poller
         :content-id="$content->id"
@@ -411,16 +568,20 @@
             </div>
             <div class="relative hidden 2xl:block">
                 <select wire:model.live="selectedPreviewTargetId" class="cms-select min-w-28" aria-label="Preview target">
-                    <option value="">Internal</option>
+                    @if($this->previewTargets->isEmpty())
+                        <option value="">No frontend configured</option>
+                    @endif
                     @foreach($this->previewTargets as $previewTarget)
                         <option value="{{ $previewTarget->id }}">{{ $previewTarget->name }}</option>
                     @endforeach
                 </select>
                 <x-jaunt.icon name="chevron-down" size="sm" class="pointer-events-none absolute right-2 top-1.5 text-tertiary" />
             </div>
-            <a href="{{ $this->previewUrl }}" target="_blank" rel="noopener noreferrer" class="cms-iconbtn border border-default bg-card shadow-xs" title="Open preview" aria-label="Open preview">
-                <x-jaunt.icon name="eye" size="sm" />
-            </a>
+            @if($this->previewUrl)
+                <a href="{{ $this->previewUrl }}" target="_blank" rel="noopener noreferrer" class="cms-iconbtn border border-default bg-card shadow-xs" title="Open preview" aria-label="Open preview">
+                    <x-jaunt.icon name="eye" size="sm" />
+                </a>
+            @endif
             <button type="button" wire:click="undoLastChange" @disabled(! $this->undoRevision) class="cms-iconbtn hidden border border-default bg-card shadow-xs disabled:cursor-not-allowed disabled:opacity-45 lg:inline-flex" title="{{ $this->undoRevision ? 'Undo last change' : 'Nothing to undo' }}" aria-label="Undo last change">
                 <x-jaunt.icon name="undo-2" size="md" />
             </button>
@@ -472,18 +633,28 @@
         </div>
     </header>
 
-    <div class="contents">
-    {{-- Content area: begins exactly below the fixed editor toolbar. --}}
-    <div class="cms-editor-body absolute inset-x-0 top-[var(--topbar-h)] bottom-0 flex min-w-0 transition-[margin] duration-base ease-standard" x-bind:style="{ marginRight: inspectorOpen ? 'var(--admin-rail-width)' : '44px' }">
+    {{-- ─────────────────────────────────────────────────────
+     | PANEL LAYOUT STORYBOARD
+     |
+     |    0ms   Alpine updates the desired left and right rail widths
+     |  180ms   one grid transition settles both rails and the canvas
+     | ───────────────────────────────────────────────────── --}}
+    <div
+        class="cms-editor-workspace absolute inset-x-0 top-[var(--topbar-h)] bottom-0 min-w-0 overflow-hidden"
+        style="--editor-pages-width: {{ $leftSidebarCollapsed ? '44px' : '263px' }}; --editor-inspector-width: {{ $drawerOpen ? 'var(--admin-rail-width)' : '44px' }};"
+        x-bind:style="{
+            '--editor-pages-width': leftCollapsed ? '44px' : '263px',
+            '--editor-inspector-width': inspectorOpen ? 'var(--admin-rail-width)' : '44px',
+        }"
+    >
     {{-- Left: Content Tree — Figma node 3:797 --}}
     <aside
         id="content-tree"
-        class="cms-editor-tree bg-app border-r border-subtle flex flex-col shrink-0 z-40 hidden xl:flex overflow-hidden transition-[width] duration-base ease-standard"
-        x-bind:style="{ width: leftCollapsed ? '44px' : '263px' }"
+        class="cms-editor-tree bg-app border-r border-subtle flex flex-col z-40 hidden xl:flex overflow-hidden"
         aria-label="Content tree"
     >
         <div x-cloak x-show="leftCollapsed" class="flex h-full w-11 flex-col items-center gap-2 py-2">
-            <button type="button" x-on:click="openPages()" class="cms-iconbtn text-tertiary" title="Expand pages" aria-label="Expand pages" aria-expanded="false" aria-controls="content-tree">
+            <button type="button" x-on:click="openPages()" class="cms-iconbtn text-tertiary" title="Expand pages · Toggle all panels with ⌘\" aria-label="Expand pages" aria-expanded="false" aria-controls="content-tree">
                 <x-jaunt.icon name="panel-left-open" size="sm" class="pointer-events-none" />
             </button>
             <span class="mt-1 text-[10px] font-semibold uppercase tracking-wider text-tertiary [writing-mode:vertical-rl] rotate-180">Pages</span>
@@ -493,7 +664,7 @@
             <span class="text-[13px] font-medium leading-[17.55px] tracking-[-0.154px] text-primary">Pages</span>
             <div class="flex items-center gap-0.5">
                 <a href="{{ route('admin.content.create', ['type' => 'page', 'parent_id' => $content->parent_id ?? null]) }}" wire:navigate class="cms-iconbtn !h-[30px] !w-[30px] text-tertiary hover:bg-hover hover:text-primary" title="New page" aria-label="New page"><x-jaunt.icon name="plus" size="sm" /></a>
-                <button type="button" x-on:click="leftCollapsed = true" class="cms-iconbtn text-tertiary" title="Collapse pages" aria-label="Collapse pages" aria-expanded="true" aria-controls="content-tree"><x-jaunt.icon name="panel-left-close" size="sm" class="pointer-events-none" /></button>
+                <button type="button" x-on:click="leftCollapsed = true" class="cms-iconbtn text-tertiary" title="Collapse pages · Toggle all panels with ⌘\" aria-label="Collapse pages" aria-expanded="true" aria-controls="content-tree"><x-jaunt.icon name="panel-left-close" size="sm" class="pointer-events-none" /></button>
             </div>
         </div>
         <div class="shrink-0 border-b border-subtle bg-card p-2">
@@ -571,18 +742,51 @@
     {{-- Center: Canvas only (header is fixed above) --}}
     <main class="flex-1 min-w-0 flex flex-col bg-sunken relative" role="main" aria-label="Page canvas">
         <div x-show="canvasMode === 'preview'" x-cloak class="relative flex-1 min-h-0 overflow-hidden bg-sunken p-4">
-            <iframe
-                x-ref="previewFrame"
-                x-on:load="restorePreviewScroll(); syncPreviewSelection()"
-                wire:ignore
-                name="pilot-cms-preview"
-                x-bind:src="previewFrameSrc"
-                x-bind:style="`width: ${previewWidth()}`"
-                class="mx-auto h-full max-w-full rounded-lg border border-default bg-card shadow-lg transition-[width]"
-                title="Live preview"
-            ></iframe>
+            @if($this->previewFrameUrl)
+                <div
+                    x-bind:style="`width: ${previewWidth()}`"
+                    class="relative mx-auto h-full max-w-full transition-[width]"
+                >
+                    <iframe
+                        x-ref="previewFramePrimary"
+                        x-on:load="handlePreviewFrameLoad(0)"
+                        wire:ignore
+                        name="pilot-cms-preview"
+                        x-bind:src="previewFrameSources[0]"
+                        x-bind:class="activePreviewFrameIndex === 0 ? 'z-20 opacity-100 pointer-events-auto' : 'z-10 opacity-0 pointer-events-none'"
+                        x-bind:style="{ transitionDuration: `${previewMotion.crossfade}ms` }"
+                        x-bind:tabindex="activePreviewFrameIndex === 0 ? 0 : -1"
+                        class="absolute inset-0 h-full w-full rounded-lg border border-default bg-card shadow-lg transition-opacity ease-standard motion-reduce:transition-none"
+                        title="Live preview"
+                    ></iframe>
+                    <iframe
+                        x-ref="previewFrameSecondary"
+                        x-on:load="handlePreviewFrameLoad(1)"
+                        wire:ignore
+                        x-bind:src="previewFrameSources[1]"
+                        x-bind:class="activePreviewFrameIndex === 1 ? 'z-20 opacity-100 pointer-events-auto' : 'z-10 opacity-0 pointer-events-none'"
+                        x-bind:style="{ transitionDuration: `${previewMotion.crossfade}ms` }"
+                        x-bind:tabindex="activePreviewFrameIndex === 1 ? 0 : -1"
+                        class="absolute inset-0 h-full w-full rounded-lg border border-default bg-card shadow-lg transition-opacity ease-standard motion-reduce:transition-none"
+                        title="Live preview"
+                    ></iframe>
+                </div>
+            @else
+                <div class="mx-auto flex h-full max-w-2xl items-center justify-center">
+                    <div class="rounded-lg border border-default bg-card p-8 text-center shadow-sm">
+                        <div class="mx-auto flex size-10 items-center justify-center rounded-full bg-slate-100 text-secondary">
+                            <x-jaunt.icon name="monitor" size="md" />
+                        </div>
+                        <h2 class="mt-4 text-base font-semibold text-primary">Connect a frontend preview</h2>
+                        <p class="mt-2 text-sm text-secondary">Add a preview URL to this space, then install <span class="font-mono">pilot/laravel</span> in the frontend application.</p>
+                        @if(auth()->user()?->hasRole('Admin') && $content->space)
+                            <a href="{{ route('admin.spaces.edit', $content->space) }}" wire:navigate class="cms-btn cms-btn-primary mt-5 inline-flex">Configure preview URLs</a>
+                        @endif
+                    </div>
+                </div>
+            @endif
 
-            <button type="button" wire:click="$set('blockLibraryOpen', true)" class="cms-fab absolute bottom-8 left-1/2 z-50 -translate-x-1/2">
+            <button type="button" x-on:click="blockLibraryOpen = true" class="cms-fab absolute bottom-8 left-1/2 z-50 -translate-x-1/2">
                 <x-jaunt.icon name="plus" size="sm" class="text-white" />
                 <span class="text-sm font-medium text-white">Add Block</span>
                 <div class="h-4 w-px bg-white/30"></div>
@@ -607,7 +811,7 @@
                     @if(empty($blocks))
                         <div
                             class="text-center py-24 text-slate-500 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-blue-500 hover:bg-blue-50/30 transition-colors"
-                            wire:click="$set('blockLibraryOpen', true)"
+                            x-on:click="blockLibraryOpen = true"
                             role="button"
                             tabindex="0"
                         >
@@ -625,7 +829,7 @@
                             ])
                         @endforeach
                         <div class="flex justify-center py-4">
-                            <button type="button" wire:click="$set('blockLibraryOpen', true)" class="cms-btn cms-btn-secondary">
+                            <button type="button" x-on:click="blockLibraryOpen = true" class="cms-btn cms-btn-secondary">
                                 <x-jaunt.icon name="plus" size="sm" />
                                 Add block
                             </button>
@@ -635,7 +839,7 @@
             </div>
 
             {{-- Floating Add Block button --}}
-            <button type="button" wire:click="$set('blockLibraryOpen', true)" class="cms-fab absolute bottom-8 z-50">
+            <button type="button" x-on:click="blockLibraryOpen = true" class="cms-fab absolute bottom-8 z-50">
                 <x-jaunt.icon name="plus" size="sm" class="text-white" />
                 <span class="text-sm font-medium text-white">Add Block</span>
                 <div class="h-4 w-px bg-white/30"></div>
@@ -644,9 +848,8 @@
         </div>
         </div>
     </main>
-    </div>{{-- /content area --}}
 
-    {{-- Right: Edit Panel — fixed top 0, bottom 0, right 0, 500px, 100% view height --}}
+    {{-- Right: Edit Panel — the shared grid owns its width and canvas displacement. --}}
     @php
         $editPanelTabs = ['content' => 'Content', 'comments' => 'Comments', 'validation' => 'Checks', 'seo' => 'Advanced'];
         $hasSelectedBlock = $selectedBlockId !== null;
@@ -660,12 +863,11 @@
             'shadow-xl': inspectorOpen,
             'shadow-none': ! inspectorOpen,
         }"
-        x-bind:style="{ width: inspectorOpen ? 'var(--admin-rail-width)' : '44px' }"
-        class="cms-drawer cms-editor-inspector fixed top-[var(--topbar-h)] bottom-0 right-0 transition-[width,box-shadow] duration-base ease-standard z-40"
+        class="cms-drawer cms-editor-inspector z-40"
         aria-label="Edit panel"
     >
         <div x-cloak x-show="! inspectorOpen" class="flex h-full w-11 flex-col items-center gap-2 py-2">
-            <button type="button" x-on:click="openInspector()" class="cms-iconbtn text-tertiary" title="Expand inspector" aria-label="Expand inspector" aria-expanded="false" aria-controls="content-inspector">
+            <button type="button" x-on:click="openInspector()" class="cms-iconbtn text-tertiary" title="Expand inspector · Toggle all panels with ⌘\" aria-label="Expand inspector" aria-expanded="false" aria-controls="content-inspector">
                 <x-jaunt.icon name="panel-right-open" size="sm" class="pointer-events-none" />
             </button>
             <span class="mt-1 text-[10px] font-semibold uppercase tracking-wider text-tertiary [writing-mode:vertical-rl] rotate-180">Inspector</span>
@@ -692,7 +894,7 @@
                 <button type="button" wire:click="duplicateBlock({{ $selectedBlockId }})" class="cms-iconbtn" aria-label="Duplicate block" title="Duplicate block"><x-jaunt.icon name="copy" size="sm" /></button>
                 <button type="button" wire:click="deleteBlock({{ $selectedBlockId }})" wire:confirm="Delete this block?" class="cms-iconbtn cms-iconbtn-danger" aria-label="Delete block" title="Delete block"><x-jaunt.icon name="trash-2" size="sm" /></button>
                 @endif
-                <button type="button" x-on:click="inspectorOpen = false" class="cms-iconbtn text-tertiary" title="Collapse inspector" aria-label="Collapse inspector" aria-expanded="true" aria-controls="content-inspector">
+                <button type="button" x-on:click="closeInspector()" class="cms-iconbtn text-tertiary" title="Collapse inspector · Toggle all panels with ⌘\" aria-label="Collapse inspector" aria-expanded="true" aria-controls="content-inspector">
                     <x-jaunt.icon name="panel-right-close" size="sm" class="pointer-events-none" />
                 </button>
             </div>
@@ -701,7 +903,7 @@
         {{-- Tabs --}}
         <div class="cms-drawer-tabs" role="tablist" aria-label="Inspector sections" data-cms-tabs>
             @foreach($editPanelTabs as $tab => $label)
-            <button type="button" id="inspector-tab-{{ $tab }}" wire:click="$wire.set('rightPanelTab', '{{ $tab }}')" class="cms-tab flex-1" role="tab" aria-selected="{{ $rightPanelTab === $tab ? 'true' : 'false' }}" aria-controls="inspector-panel-{{ $tab }}" tabindex="{{ $rightPanelTab === $tab ? '0' : '-1' }}">{{ $label }}</button>
+            <button type="button" id="inspector-tab-{{ $tab }}" x-on:click="rightPanelTab = '{{ $tab }}'" class="cms-tab flex-1" role="tab" x-bind:aria-selected="rightPanelTab === '{{ $tab }}'" aria-controls="inspector-panel-{{ $tab }}" x-bind:tabindex="rightPanelTab === '{{ $tab }}' ? 0 : -1">{{ $label }}</button>
             @endforeach
         </div>
 
@@ -709,7 +911,7 @@
         <div class="cms-drawer-body space-y-7" data-editor-inspector-body>
 
             {{-- CONTENT TAB --}}
-            <div id="inspector-panel-content" class="{{ $rightPanelTab === 'content' ? '' : 'hidden' }}" role="tabpanel" aria-labelledby="inspector-tab-content">
+            <div id="inspector-panel-content" x-cloak x-show="rightPanelTab === 'content'" role="tabpanel" aria-labelledby="inspector-tab-content">
 
                 @if($hasSelectedBlock && $bt)
                     {{-- When a block is selected: show ONLY the block fields --}}
@@ -728,7 +930,7 @@
                         <div class="flex items-center justify-between mb-2">
                             <label class="text-xs font-bold text-slate-600 uppercase tracking-wide">Name</label>
                         </div>
-                        <input type="text" value="{{ $content->name }}" wire:change="updateContent('name', $event.target.value)" placeholder="Page title" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm transition-[border-color,box-shadow,background-color] duration-fast" />
+                        <input type="text" value="{{ $content->name }}" wire:blur="updateContent('name', $event.target.value)" placeholder="Page title" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm transition-[border-color,box-shadow,background-color] duration-fast" />
                     </div>
 
                     {{-- Slug --}}
@@ -736,14 +938,14 @@
                         <div class="flex items-center justify-between mb-2">
                             <label class="text-xs font-bold text-slate-600 uppercase tracking-wide">Slug</label>
                         </div>
-                        <input type="text" value="{{ $content->slug }}" wire:change="updateContent('slug', $event.target.value)" placeholder="page-slug" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm transition-[border-color,box-shadow,background-color] duration-fast" />
+                        <input type="text" value="{{ $content->slug }}" wire:blur="updateContent('slug', $event.target.value)" placeholder="page-slug" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm transition-[border-color,box-shadow,background-color] duration-fast" />
                     </div>
 
                     <div>
                         <div class="flex items-center justify-between mb-2">
                             <label class="text-xs font-bold text-slate-600 uppercase tracking-wide">Categories</label>
                         </div>
-                        <input type="text" value="{{ implode(', ', $content->categories ?? []) }}" wire:change="updateTaxonomy('categories', $event.target.value)" placeholder="News, Destinations" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm transition-[border-color,box-shadow,background-color] duration-fast" />
+                        <input type="text" value="{{ implode(', ', $content->categories ?? []) }}" wire:blur="updateTaxonomy('categories', $event.target.value)" placeholder="News, Destinations" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm transition-[border-color,box-shadow,background-color] duration-fast" />
                         <p class="mt-1 text-xs text-slate-400">Comma-separated categories for grouping content.</p>
                     </div>
 
@@ -751,9 +953,81 @@
                         <div class="flex items-center justify-between mb-2">
                             <label class="text-xs font-bold text-slate-600 uppercase tracking-wide">Tags</label>
                         </div>
-                        <input type="text" value="{{ implode(', ', $content->tags ?? []) }}" wire:change="updateTaxonomy('tags', $event.target.value)" placeholder="family travel, hiking, summer" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm transition-[border-color,box-shadow,background-color] duration-fast" />
+                        <input type="text" value="{{ implode(', ', $content->tags ?? []) }}" wire:blur="updateTaxonomy('tags', $event.target.value)" placeholder="family travel, hiking, summer" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm transition-[border-color,box-shadow,background-color] duration-fast" />
                         <p class="mt-1 text-xs text-slate-400">Comma-separated tags for filtering and discovery.</p>
                     </div>
+
+                    @if($content->contentType && ! empty($content->contentType->schema['fields']))
+                        <div class="space-y-5 border-t border-slate-200 pt-6">
+                            <div>
+                                <div class="text-xs font-bold uppercase tracking-wide text-slate-600">{{ $content->contentType->name }} fields</div>
+                                <p class="mt-1 text-xs text-slate-400">Structured fields supplied by this content type.</p>
+                            </div>
+
+                            @foreach($content->contentType->schema['fields'] as $contentTypeField)
+                                @php
+                                    $contentTypeFieldKey = $contentTypeField['key'] ?? '';
+                                    $contentTypeFieldType = $contentTypeField['type'] ?? 'text';
+                                    $contentTypeFieldValue = $content->meta[$contentTypeFieldKey] ?? ($contentTypeField['default'] ?? '');
+                                    $contentTypeFieldValue = is_array($contentTypeFieldValue)
+                                        ? ($contentTypeFieldValue['en'] ?? reset($contentTypeFieldValue) ?: '')
+                                        : $contentTypeFieldValue;
+                                @endphp
+                                <div>
+                                    <div class="mb-2 flex items-center justify-between gap-3">
+                                        <label class="text-xs font-bold uppercase tracking-wide text-slate-600">{{ $contentTypeField['label'] ?? $contentTypeFieldKey }}</label>
+                                        <span class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-400">{{ $contentTypeFieldType }}</span>
+                                    </div>
+
+                                    @if($contentTypeFieldType === 'textarea')
+                                        <textarea rows="{{ $contentTypeField['rows'] ?? 4 }}"
+                                            wire:blur="updateContentTypeField(@js($contentTypeFieldKey), $event.target.value, @js((bool) ($contentTypeField['translatable'] ?? false)))"
+                                            class="w-full min-h-[80px] resize-none rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-700 shadow-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                        >{{ $contentTypeFieldValue }}</textarea>
+                                    @elseif($contentTypeFieldType === 'number')
+                                        <input type="number" value="{{ $contentTypeFieldValue }}"
+                                            wire:blur="updateContentTypeField(@js($contentTypeFieldKey), $event.target.value, @js((bool) ($contentTypeField['translatable'] ?? false)))"
+                                            class="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-sm text-slate-700 shadow-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                        />
+                                    @elseif($contentTypeFieldType === 'boolean')
+                                        <label class="flex items-center gap-2 text-sm text-slate-600">
+                                            <input type="checkbox" {{ $contentTypeFieldValue ? 'checked' : '' }}
+                                                wire:blur="updateContentTypeField(@js($contentTypeFieldKey), $event.target.checked, false)"
+                                                class="rounded border-slate-300 text-blue-500 focus:ring-blue-500"
+                                            />
+                                            Enabled
+                                        </label>
+                                    @elseif($contentTypeFieldType === 'select')
+                                        <select wire:blur="updateContentTypeField(@js($contentTypeFieldKey), $event.target.value, @js((bool) ($contentTypeField['translatable'] ?? false)))" class="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-sm text-slate-700 shadow-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                                            <option value="">Select...</option>
+                                            @foreach($contentTypeField['options'] ?? [] as $option)
+                                                <option value="{{ $option['value'] ?? '' }}" {{ $contentTypeFieldValue === ($option['value'] ?? '') ? 'selected' : '' }}>{{ $option['label'] ?? $option['value'] ?? '' }}</option>
+                                            @endforeach
+                                        </select>
+                                    @elseif($contentTypeFieldType === 'image')
+                                        <button type="button" wire:click="$dispatch('open-asset-picker', { fieldKey: @js('content-meta:'.$contentTypeFieldKey) })" class="flex w-full items-center gap-3 rounded-lg border border-dashed border-slate-300 bg-white p-3 text-left text-sm text-slate-600 transition hover:border-blue-400 hover:bg-blue-50/30">
+                                            @if($contentTypeFieldValue)
+                                                <img src="{{ $contentTypeFieldValue }}" alt="" class="size-12 rounded object-cover" />
+                                                <span class="min-w-0 truncate">{{ $contentTypeFieldValue }}</span>
+                                            @else
+                                                <x-jaunt.icon name="image" size="md" class="text-slate-400" />
+                                                <span>Choose image</span>
+                                            @endif
+                                        </button>
+                                    @else
+                                        <input type="text" value="{{ $contentTypeFieldValue }}"
+                                            wire:blur="updateContentTypeField(@js($contentTypeFieldKey), $event.target.value, @js((bool) ($contentTypeField['translatable'] ?? false)))"
+                                            class="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-sm text-slate-700 shadow-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                        />
+                                    @endif
+
+                                    @if(! empty($contentTypeField['help']))
+                                        <p class="mt-1 text-xs text-slate-400">{{ $contentTypeField['help'] }}</p>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
 
                     {{-- Parent Folder (pages only) --}}
                     @if($content->isPage())
@@ -762,7 +1036,7 @@
                             <label class="text-xs font-bold text-slate-600 uppercase tracking-wide">Content Type</label>
                         </div>
                         <div class="relative">
-                            <select wire:change="updateContent('content_type_id', $event.target.value)" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm appearance-none cursor-pointer">
+                            <select wire:blur="updateContent('content_type_id', $event.target.value)" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm appearance-none cursor-pointer">
                                 <option value="">Generic Page</option>
                                 @foreach($this->contentTypes as $contentType)
                                     <option value="{{ $contentType->id }}" {{ $content->content_type_id === $contentType->id ? 'selected' : '' }}>{{ $contentType->name }}</option>
@@ -777,7 +1051,7 @@
                             <label class="text-xs font-bold text-slate-600 uppercase tracking-wide">Parent Folder</label>
                         </div>
                         <div class="relative">
-                            <select wire:change="updateContent('parent_id', $event.target.value)" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm appearance-none cursor-pointer">
+                            <select wire:blur="updateContent('parent_id', $event.target.value)" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm appearance-none cursor-pointer">
                                 <option value="">None (Root)</option>
                                 @foreach($this->folders as $folder)
                                     <option value="{{ $folder->id }}" {{ $content->parent_id == $folder->id ? 'selected' : '' }}>{{ $folder->name }}</option>
@@ -794,7 +1068,7 @@
                             <label class="text-xs font-bold text-slate-600 uppercase tracking-wide">Status</label>
                         </div>
                         <div class="relative">
-                            <select wire:change="updateContent('status', $event.target.value)" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm appearance-none cursor-pointer">
+                            <select wire:blur="updateContent('status', $event.target.value)" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm appearance-none cursor-pointer">
                                 <option value="draft" {{ $content->status === 'draft' ? 'selected' : '' }}>Draft</option>
                                 <option value="published" {{ $content->status === 'published' ? 'selected' : '' }}>Published</option>
                             </select>
@@ -808,7 +1082,7 @@
                     <div class="pt-5 mt-2 border-t border-slate-100">
                         <div class="flex items-center justify-between mb-4">
                             <span class="text-xs font-bold text-slate-600 uppercase tracking-wide">Blocks</span>
-                            <button type="button" wire:click="$set('blockLibraryOpen', true)" class="cms-text-btn">Add block</button>
+                            <button type="button" x-on:click="blockLibraryOpen = true" class="cms-text-btn">Add block</button>
                         </div>
                         <div wire:sort="sortItem" class="space-y-0.5">
                             @foreach($blocks as $block)
@@ -831,7 +1105,7 @@
             </div>
 
             {{-- COMMENTS TAB --}}
-            <div id="inspector-panel-comments" class="{{ $rightPanelTab === 'comments' ? '' : 'hidden' }} space-y-5" role="tabpanel" aria-labelledby="inspector-tab-comments">
+            <div id="inspector-panel-comments" x-cloak x-show="rightPanelTab === 'comments'" class="space-y-5" role="tabpanel" aria-labelledby="inspector-tab-comments">
                 <div>
                     <span class="text-xs font-bold text-slate-600 uppercase tracking-wide block mb-2">Presence</span>
                     <div wire:poll.visible.15000ms="touchPresence" class="space-y-2">
@@ -882,7 +1156,7 @@
             </div>
 
             {{-- VALIDATION TAB --}}
-            <div id="inspector-panel-validation" class="{{ $rightPanelTab === 'validation' ? '' : 'hidden' }} space-y-5" role="tabpanel" aria-labelledby="inspector-tab-validation">
+            <div id="inspector-panel-validation" x-cloak x-show="rightPanelTab === 'validation'" class="space-y-5" role="tabpanel" aria-labelledby="inspector-tab-validation">
                 <div>
                     <span class="text-xs font-bold text-slate-600 uppercase tracking-wide block mb-2">Validation panel</span>
                     <div class="space-y-2">
@@ -927,27 +1201,27 @@
             </div>
 
             {{-- ADVANCED TAB (SEO + Status + History) --}}
-            <div id="inspector-panel-seo" class="{{ $rightPanelTab === 'seo' ? '' : 'hidden' }} space-y-6" role="tabpanel" aria-labelledby="inspector-tab-seo">
+            <div id="inspector-panel-seo" x-cloak x-show="rightPanelTab === 'seo'" class="space-y-6" role="tabpanel" aria-labelledby="inspector-tab-seo">
                 <div>
                     <span class="text-xs font-bold text-slate-600 uppercase tracking-wide block mb-2">SEO</span>
                     <div class="group mb-4">
                         <label class="text-xs text-slate-600 block mb-1.5">Meta title</label>
-                        <input type="text" value="{{ $content->meta['meta_title'] ?? '' }}" wire:change="updateContentMeta('meta_title', $event.target.value)" placeholder="Page title for search engines" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm" />
+                        <input type="text" value="{{ $content->meta['meta_title'] ?? '' }}" wire:blur="updateContentMeta('meta_title', $event.target.value)" placeholder="Page title for search engines" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm" />
                     </div>
                     <div class="group">
                         <label class="text-xs text-slate-600 block mb-1.5">Meta description</label>
-                        <textarea rows="3" wire:change="updateContentMeta('meta_description', $event.target.value)" placeholder="Brief description" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none">{{ $content->meta['meta_description'] ?? '' }}</textarea>
+                        <textarea rows="3" wire:blur="updateContentMeta('meta_description', $event.target.value)" placeholder="Brief description" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none">{{ $content->meta['meta_description'] ?? '' }}</textarea>
                     </div>
                     <div class="group mt-4">
                         <label class="text-xs text-slate-600 block mb-1.5">Canonical URL</label>
-                        <input type="text" value="{{ $content->meta['canonical_url'] ?? '' }}" wire:change="updateContentMeta('canonical_url', $event.target.value)" placeholder="https://example.com/page" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm" />
+                        <input type="text" value="{{ $content->meta['canonical_url'] ?? '' }}" wire:blur="updateContentMeta('canonical_url', $event.target.value)" placeholder="https://example.com/page" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm" />
                     </div>
                     <div class="group mt-4">
                         <label class="text-xs text-slate-600 block mb-1.5">Open Graph image</label>
-                        <input type="text" value="{{ $content->meta['og_image'] ?? '' }}" wire:change="updateContentMeta('og_image', $event.target.value)" placeholder="/storage/social-card.jpg" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm" />
+                        <input type="text" value="{{ $content->meta['og_image'] ?? '' }}" wire:blur="updateContentMeta('og_image', $event.target.value)" placeholder="/storage/social-card.jpg" class="w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm" />
                     </div>
                     <label class="mt-4 flex items-center gap-2 text-sm text-slate-600">
-                        <input type="checkbox" wire:change="updateContentMeta('noindex', $event.target.checked)" {{ ! empty($content->meta['noindex']) ? 'checked' : '' }} class="rounded border-slate-300 text-blue-500 focus:ring-blue-500" />
+                        <input type="checkbox" wire:blur="updateContentMeta('noindex', $event.target.checked)" {{ ! empty($content->meta['noindex']) ? 'checked' : '' }} class="rounded border-slate-300 text-blue-500 focus:ring-blue-500" />
                         Hide from search engines
                     </label>
                 </div>
@@ -1022,11 +1296,31 @@
     </aside>
     </div>
 
+    <div
+        x-cloak
+        x-show="pendingDeleteBlockId !== null"
+        x-on:keydown.escape.window="cancelBlockDeletion()"
+        class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 p-4"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="delete-preview-block-title"
+        aria-describedby="delete-preview-block-description"
+    >
+        <div x-on:click.outside="cancelBlockDeletion()" class="w-full max-w-sm rounded-xl border border-default bg-card p-5 shadow-2xl">
+            <h2 id="delete-preview-block-title" class="text-base font-semibold text-primary">Delete this block?</h2>
+            <p id="delete-preview-block-description" class="mt-2 text-sm text-secondary">This removes the block and any blocks nested inside it.</p>
+            <div class="mt-5 flex justify-end gap-2">
+                <button type="button" x-on:click="cancelBlockDeletion()" class="cms-btn cms-btn-secondary">Cancel</button>
+                <button type="button" x-on:click="confirmBlockDeletion()" class="cms-btn cms-btn-danger">Delete block</button>
+            </div>
+        </div>
+    </div>
+
     @if($revisionModalOpen)
         <div
             wire:keydown.escape="closeRevisionModal"
             x-on:keydown.escape.window="$wire.closeRevisionModal()"
-            class="fixed inset-0 z-50"
+            class="fixed inset-0 z-dialog"
             role="dialog"
             aria-modal="true"
             aria-labelledby="revision-modal-title"
@@ -1144,7 +1438,7 @@
                             x-show="blockMatches(@js($blockType->name), @js($blockType->key), @js($blockDescription))"
                             wire:click="addBlock('{{ $blockType->key }}')"
                             data-block-search-text="{{ $blockSearchText }}"
-                            class="group rounded-[10px] border border-slate-300 bg-white p-[15px] text-left shadow-[0_1px_1px_rgba(19,20,24,0.06),0_2px_3px_rgba(19,20,24,0.05)] outline-none transition-[border-color,box-shadow,transform] duration-fast hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                            class="group rounded-[10px] border border-slate-300 bg-white p-[15px] text-left shadow-[0_1px_1px_rgba(19,20,24,0.06),0_2px_3px_rgba(19,20,24,0.05)] dark:shadow-sm outline-none transition-[border-color,box-shadow,transform] duration-fast hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md dark:hover:shadow-md focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                         >
                             <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-100">
                                 <x-jaunt.icon :name="$blockIcon" size="md" />

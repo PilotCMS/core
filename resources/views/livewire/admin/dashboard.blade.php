@@ -57,7 +57,7 @@
                     <div class="cms-panel">
                         <div class="cms-panel-head">
                             <h2 class="cms-panel-title">Recent activity</h2>
-                            <a href="{{ route('admin.content.index') }}" wire:navigate class="cms-panel-link">View all</a>
+                            <a href="{{ route('admin.activity.index') }}" wire:navigate class="cms-panel-link">View all</a>
                         </div>
 
                         <div class="cms-activity-body">
@@ -73,9 +73,22 @@
                                                     <strong class="font-semibold">{{ $activity->user?->name ?? 'System' }}</strong>
                                                     {{ $activity->action }}
                                                     @if($activity->subject)
-                                                        <span class="font-medium text-accent-text">{{ $activity->subject->name ?? 'Unknown' }}</span>
+                                                        @php
+                                                            $activitySubjectName = $activity->subject->name
+                                                                ?? $activity->meta['subject_name']
+                                                                ?? class_basename($activity->subject_type);
+                                                            $activitySubjectRoute = $activity->subject instanceof \Pilot\Core\Models\Content
+                                                                && $activity->subject->isPage()
+                                                                    ? route('admin.content.editor', $activity->subject)
+                                                                    : null;
+                                                        @endphp
+                                                        @if($activitySubjectRoute)
+                                                            <a href="{{ $activitySubjectRoute }}" wire:navigate class="font-medium text-accent-text hover:underline">{{ $activitySubjectName }}</a>
+                                                        @else
+                                                            <span class="font-medium text-accent-text">{{ $activitySubjectName }}</span>
+                                                        @endif
                                                     @else
-                                                        {{ class_basename($activity->subject_type) }}
+                                                        {{ $activity->meta['subject_name'] ?? class_basename($activity->subject_type) }}
                                                     @endif
                                                 </div>
                                                 <time class="mt-0.5 block text-2xs text-tertiary">{{ $activity->created_at->diffForHumans() }}</time>
@@ -159,7 +172,7 @@
                     </div>
                 </section>
 
-                <section>
+                <section class="dashboard-continue-editing">
                     <div class="mb-4 flex items-center justify-between gap-3">
                         <h2 class="text-sm font-semibold text-primary">Continue editing</h2>
                         <a href="{{ route('admin.content.index') }}" wire:navigate class="text-sm font-medium text-accent-text">View all content</a>
@@ -168,7 +181,7 @@
                     @if($recentPages->isNotEmpty())
                         <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
                             @foreach($recentPages as $page)
-                                <a href="{{ route('admin.content.editor', $page) }}" wire:navigate class="cms-panel block transition-shadow hover:shadow-md">
+                                <a href="{{ route('admin.content.editor', $page) }}" wire:navigate class="cms-panel dashboard-continue-editing-card block transition-shadow">
                                     <div class="flex items-center gap-3 border-b border-subtle p-4">
                                         <span class="cms-tile cms-tile-accent"><x-jaunt.icon name="file-text" size="sm" /></span>
                                         <div class="min-w-0 flex-1">

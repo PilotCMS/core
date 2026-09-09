@@ -1,8 +1,8 @@
-<div class="flex flex-col w-full min-w-0 h-full bg-gray-50">
+<div x-data="{ newFolderModalOpen: @entangle('showNewFolderModal') }" class="flex flex-col w-full min-w-0 h-full bg-gray-50">
     <x-jaunt.shell.dynamic-header title="Block Types" subtitle="Reusable content components for your pages." top="0px" as="header" scroll-target="#blocks-list-scroll" aria-label="Page header">
         <x-slot:actions>
         <div class="cms-actions pb-0.5">
-            <button type="button" wire:click="$set('showNewFolderModal', true)" class="cms-btn cms-btn-secondary">
+            <button type="button" x-on:click="newFolderModalOpen = true" class="cms-btn cms-btn-secondary">
                 <x-jaunt.icon name="folder-plus" size="sm" />
                 New folder
             </button>
@@ -143,9 +143,8 @@
     </div>
 
     {{-- New folder modal --}}
-    @if($showNewFolderModal)
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" aria-modal="true" role="dialog">
-        <div class="fixed inset-0 bg-slate-500/30" wire:click="$set('showNewFolderModal', false)"></div>
+    <div x-cloak x-show="newFolderModalOpen" x-on:keydown.escape.window="newFolderModalOpen = false" class="fixed inset-0 z-50 flex items-center justify-center p-4" aria-modal="true" role="dialog">
+        <div class="fixed inset-0 bg-slate-500/30" x-on:click="newFolderModalOpen = false"></div>
         <div class="relative bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-sm p-6">
             <h3 class="text-lg font-semibold text-slate-900 mb-4">New folder</h3>
             <form wire:submit="createFolder" class="space-y-4">
@@ -157,11 +156,10 @@
                     @enderror
                 </div>
                 <div class="flex justify-end gap-2">
-                    <button type="button" wire:click="$set('showNewFolderModal', false)" class="cms-btn cms-btn-secondary">Cancel</button>
+                    <button type="button" x-on:click="newFolderModalOpen = false" class="cms-btn cms-btn-secondary">Cancel</button>
                     <button type="submit" class="cms-btn cms-btn-primary">Create folder</button>
                 </div>
             </form>
         </div>
     </div>
-    @endif
 </div>

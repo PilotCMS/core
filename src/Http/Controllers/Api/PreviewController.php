@@ -9,10 +9,13 @@ use Pilot\Core\Http\Controllers\Controller;
 use Pilot\Core\Http\Resources\Cms\ContentResource;
 use Pilot\Core\Models\CmsSetting;
 use Pilot\Core\Models\Content;
+use Pilot\Core\Support\Cms\ContentCollectionResolver;
 use Pilot\Laravel\Support\ContentRenderer;
 
 class PreviewController extends Controller
 {
+    public function __construct(private readonly ContentCollectionResolver $contentCollections) {}
+
     /**
      * Return draft content for preview. Requires signed URL.
      */
@@ -26,8 +29,12 @@ class PreviewController extends Controller
             return response()->json(['error' => 'Invalid or expired preview link'], 403);
         }
 
-        $locale = $request->get('locale', CmsSetting::get('default_locale', 'en'));
-        $renderedContent = array_merge($renderer->fromModel($content, $locale)->toArray(), [
+        $locale = $request->get('locale', CmsSetting::get('default_locale', config('cms.default_locale', 'en')));
+        $renderedContent = $renderer->fromModel($content, $locale)->toArray();
+        $blocks = $this->contentCollections->resolveBlocks($renderedContent['body'] ?? [], $content, $locale);
+        $renderedContent['body'] = $blocks;
+        $renderedContent['content']['body'] = $blocks;
+        $renderedContent = array_merge($renderedContent, [
             'categories' => $this->taxonomyValues($content, 'categories'),
             'tags' => $this->taxonomyValues($content, 'tags'),
         ]);

@@ -1,5 +1,5 @@
 <div class="cms-drawer-page flex min-h-0 w-full min-w-0 flex-1 flex-col bg-gray-50">
-    <x-jaunt.shell.dynamic-header title="CMS Settings" subtitle="Configure Pilot, review updates, and control public delivery." top="0px" as="header" scroll-target="#cms-settings-scroll" aria-label="Page header">
+    <x-jaunt.shell.dynamic-header title="CMS Settings" subtitle="Configure Pilot, review updates, and control API delivery." top="0px" as="header" scroll-target="#cms-settings-scroll" aria-label="Page header">
         <x-slot:actions>
         <div class="cms-actions pb-0.5">
             <button type="button" wire:click="resetToEnvironmentDefaults" wire:confirm="Reset CMS settings to environment defaults?" class="cms-btn cms-btn-secondary">
@@ -18,8 +18,8 @@
             <div class="w-full space-y-8 p-6 md:p-8">
                 <section class="grid grid-cols-1 gap-4 lg:grid-cols-3">
                     <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                        <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Default space</p>
-                        <p class="mt-2 text-xl font-bold text-slate-900">{{ $defaultSpace ?: 'First space' }}</p>
+                        <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Default locale</p>
+                        <p class="mt-2 text-xl font-bold text-slate-900">{{ $defaultLocale }}</p>
                     </div>
 
                     <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -47,7 +47,7 @@
                                     <span class="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Up to date</span>
                                 @endif
                             </div>
-                            <flux:text class="mt-1 text-sm text-slate-500">Core updates include the versioned admin application, migrations, and frontend assets.</flux:text>
+                            <flux:text class="mt-1 text-sm text-slate-500">Core updates include the versioned admin application, migrations, and admin assets.</flux:text>
                         </div>
 
                         <div class="cms-actions shrink-0">
@@ -131,43 +131,18 @@
                 <form id="cms-settings-form" wire:submit="save" class="space-y-8">
                     <section class="rounded-lg border border-slate-200 bg-white shadow-sm">
                         <div class="border-b border-slate-200 px-5 py-4">
-                            <flux:heading size="md">Public website</flux:heading>
-                            <flux:text class="mt-1 text-sm text-slate-500">Control which content space and entry point power the public routes.</flux:text>
-                        </div>
-
-                        <div class="grid grid-cols-1 gap-5 p-5 lg:grid-cols-2">
-                            <flux:field>
-                                <flux:label>Default Space</flux:label>
-                                <flux:select wire:model="defaultSpace">
-                                    <option value="">First space in database</option>
-                                    @foreach($spaces as $space)
-                                        <option value="{{ $space->slug }}">{{ $space->name }} ({{ $space->slug }})</option>
-                                    @endforeach
-                                </flux:select>
-                                <flux:error name="defaultSpace" />
-                            </flux:field>
-
-                            <flux:field>
-                                <flux:label>Home Slug</flux:label>
-                                <flux:input wire:model="homeSlug" placeholder="home" />
-                                <flux:error name="homeSlug" />
-                            </flux:field>
-
-                            <flux:field>
-                                <flux:label>Default Locale</flux:label>
-                                <flux:input wire:model="defaultLocale" placeholder="en" />
-                                <flux:error name="defaultLocale" />
-                            </flux:field>
-                        </div>
-                    </section>
-
-                    <section class="rounded-lg border border-slate-200 bg-white shadow-sm">
-                        <div class="border-b border-slate-200 px-5 py-4">
                             <flux:heading size="md">API & preview</flux:heading>
                             <flux:text class="mt-1 text-sm text-slate-500">Set the guardrails for draft content delivery and editor preview links.</flux:text>
                         </div>
 
                         <div class="space-y-5 p-5">
+                            <flux:field class="max-w-xs">
+                                <flux:label>Default Locale</flux:label>
+                                <flux:input wire:model="defaultLocale" placeholder="en" />
+                                <flux:error name="defaultLocale" />
+                                <flux:description>Used when an API request does not specify a locale.</flux:description>
+                            </flux:field>
+
                             <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
                                 <label class="flex items-start gap-3 rounded-lg border border-slate-200 p-4">
                                     <flux:checkbox wire:model="draftApiEnabled" />
@@ -204,18 +179,10 @@
 
             <div class="cms-drawer-body space-y-6">
                 <section class="space-y-3">
-                    <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Public routes</h3>
+                    <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">API defaults</h3>
                     <dl class="space-y-3 text-sm">
                         <div class="flex items-start justify-between gap-4">
-                            <dt class="text-slate-500">Home path</dt>
-                            <dd class="font-mono text-slate-900">/{{ $homeSlug }}</dd>
-                        </div>
-                        <div class="flex items-start justify-between gap-4">
-                            <dt class="text-slate-500">Page view</dt>
-                            <dd class="font-mono text-slate-900">{{ config('pilot.views.page', 'page') }}</dd>
-                        </div>
-                        <div class="flex items-start justify-between gap-4">
-                            <dt class="text-slate-500">Locale fallback</dt>
+                            <dt class="text-slate-500">Locale</dt>
                             <dd class="font-mono text-slate-900">{{ $defaultLocale }}</dd>
                         </div>
                     </dl>

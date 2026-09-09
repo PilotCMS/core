@@ -5,6 +5,9 @@ namespace Pilot\Core\Livewire\Admin\Content;
 use Livewire\Component;
 use Pilot\Core\Models\BlockType;
 use Pilot\Core\Models\Content;
+use Pilot\Core\Models\ContentType;
+use Pilot\Core\Models\Datasource;
+use Pilot\Core\Support\Cms\ContentCollectionResolver;
 
 class BlockEditor extends Component
 {
@@ -48,8 +51,103 @@ class BlockEditor extends Component
 
     public function updateField($key, $value)
     {
+        $field = collect($this->blockType->schema['fields'] ?? [])
+            ->first(fn (array $field): bool => ($field['key'] ?? null) === $key);
+        $currentValue = $this->data[$key] ?? null;
+
+        if (($field['translatable'] ?? false)) {
+            $currentLocaleValue = is_array($currentValue) && ! array_is_list($currentValue)
+                ? ($currentValue['en'] ?? null)
+                : $currentValue;
+
+            if ($currentLocaleValue == $value) {
+                return;
+            }
+
+            $value = array_merge(is_array($currentValue) && ! array_is_list($currentValue) ? $currentValue : [], ['en' => $value]);
+        } elseif ($currentValue == $value) {
+            return;
+        }
+
         $this->data[$key] = $value;
         $this->dispatch('block-updated', $this->block['id'], $key, $value);
+    }
+
+    /**
+     * @param  array<string, mixed>  $field
+     * @return array<int, array{value: string, label: string}>
+     */
+    public function optionsForField(array $field): array
+    {
+        $usesDatasource = ($field['option_source'] ?? (isset($field['datasource']) ? 'datasource' : 'inline')) === 'datasource';
+
+        if ($usesDatasource && filled($field['datasource'] ?? null)) {
+            $content = Content::query()->find($this->block['content_id'] ?? null);
+            $datasource = Datasource::query()
+                ->where('slug', $field['datasource'])
+                ->when($content, fn ($query) => $query->where('space_id', $content->space_id))
+                ->first();
+
+            return $datasource?->entries
+                ->map(fn ($entry): array => [
+                    'value' => (string) $entry->key,
+                    'label' => (string) ($entry->value['en'] ?? $entry->key),
+                ])
+                ->values()
+                ->all() ?? [];
+        }
+
+        return collect($field['options'] ?? [])
+            ->filter(fn ($option): bool => isset($option['value']) && $option['value'] !== '')
+            ->map(fn ($option): array => [
+                'value' => (string) $option['value'],
+                'label' => (string) ($option['label'] ?? $option['value']),
+            ])
+            ->values()
+            ->all();
+    }
+
+    public function updateContentCollectionOption(string $key, string $option, mixed $value): void
+    {
+        $configuration = is_array($this->data[$key] ?? null) ? $this->data[$key] : [];
+
+        $configuration[$option] = match ($option) {
+            'categories', 'tags' => collect(explode(',', (string) $value))
+                ->map(fn (string $item): string => trim($item))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all(),
+            'limit' => max(1, min(50, (int) $value)),
+            'order_direction' => $value === 'asc' ? 'asc' : 'desc',
+            'order_by' => in_array($value, app(ContentCollectionResolver::class)->orderableFields(), true)
+                ? $value
+                : 'published_at',
+            default => $value,
+        };
+
+        $this->updateField($key, $configuration);
+    }
+
+    /**
+     * @param  array<string, mixed>  $field
+     * @return array<int, array<string, mixed>>
+     */
+    public function contentCollectionPreview(array $field): array
+    {
+        $content = Content::query()->find($this->block['content_id'] ?? null);
+        $key = (string) ($field['key'] ?? '');
+
+        if (! $content) {
+            return [];
+        }
+
+        return app(ContentCollectionResolver::class)->resolve(
+            $content,
+            $field,
+            is_array($this->data[$key] ?? null) ? $this->data[$key] : [],
+            (string) config('cms.default_locale', 'en'),
+        );
     }
 
     public function addRepeaterItem(string $key): void
@@ -127,7 +225,27 @@ class BlockEditor extends Component
             }
         }
 
-        $items[$index][$subKey] = ($subField['translatable'] ?? false) ? ['en' => $value] : $value;
+        $currentValue = $items[$index][$subKey] ?? null;
+
+        if (($subField['translatable'] ?? false)) {
+            $currentLocaleValue = is_array($currentValue) && ! array_is_list($currentValue)
+                ? ($currentValue['en'] ?? null)
+                : $currentValue;
+
+            if ($currentLocaleValue == $value) {
+                return;
+            }
+
+            $nextValue = array_merge(is_array($currentValue) && ! array_is_list($currentValue) ? $currentValue : [], ['en' => $value]);
+        } else {
+            if ($currentValue == $value) {
+                return;
+            }
+
+            $nextValue = $value;
+        }
+
+        $items[$index][$subKey] = $nextValue;
         $this->data[$key] = $items;
         $this->dispatch('block-updated', $this->block['id'], $key, $items);
     }
@@ -139,6 +257,10 @@ class BlockEditor extends Component
 
         if (! isset($items[$index]) || ! is_array($items[$index])) {
             $items[$index] = [];
+        }
+
+        if (($items[$index][$objectKey] ?? null) == $value) {
+            return;
         }
 
         $items[$index][$objectKey] = $value;
@@ -163,6 +285,7 @@ class BlockEditor extends Component
                 ->where('type', 'page')
                 ->orderBy('name')
                 ->get(['id', 'name', 'slug', 'status']),
+            'contentTypes' => ContentType::query()->orderBy('name')->get()->keyBy('key'),
         ]);
     }
 }

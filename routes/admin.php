@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Pilot\Core\Http\Controllers\Admin\ContentPreviewController;
+use Pilot\Core\Livewire\Admin\Activity\Index as ActivityIndex;
 use Pilot\Core\Livewire\Admin\Content\Editor;
 use Pilot\Core\Livewire\Admin\Dashboard;
 use Pilot\Core\Livewire\Admin\Spaces\Create;
@@ -10,6 +10,7 @@ use Pilot\Core\Livewire\Admin\Spaces\Index;
 
 Route::prefix('admin')->name('admin.')->middleware(['web', 'auth'])->group(function () {
     Route::get('/dashboard', Dashboard::class)->name('dashboard');
+    Route::get('/activity', ActivityIndex::class)->name('activity.index');
 
     // Spaces
     Route::get('/spaces', Index::class)->name('spaces.index')->middleware('role:Admin');
@@ -21,7 +22,6 @@ Route::prefix('admin')->name('admin.')->middleware(['web', 'auth'])->group(funct
     Route::get('/content/create', Pilot\Core\Livewire\Admin\Content\Create::class)->name('content.create');
     Route::get('/content/{content}/edit', Editor::class)->name('content.edit');
     Route::get('/content/{content}/editor', Editor::class)->name('content.editor');
-    Route::get('/content/{content}/preview', ContentPreviewController::class)->name('content.preview');
     Route::get('/content-types', Pilot\Core\Livewire\Admin\ContentTypes\Index::class)->name('content-types.index')->middleware('role:Admin');
 
     // Block Types

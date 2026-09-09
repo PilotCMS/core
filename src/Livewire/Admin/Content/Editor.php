@@ -40,9 +40,9 @@ class Editor extends Component
 
     public $addBlockColumnIndex = null;
 
-    public $drawerOpen = true;
+    public $drawerOpen = false;
 
-    public $leftSidebarCollapsed = false;
+    public $leftSidebarCollapsed = true;
 
     public $rightPanelTab = 'content';
 
@@ -117,8 +117,8 @@ class Editor extends Component
 
         // Load editor preferences
         $prefs = EditorPreference::get(auth()->id(), 'editor', []);
-        $this->leftSidebarCollapsed = $prefs['leftSidebarCollapsed'] ?? false;
-        $this->drawerOpen = $prefs['drawerOpen'] ?? true;
+        $this->leftSidebarCollapsed = $prefs['leftSidebarCollapsed'] ?? true;
+        $this->drawerOpen = $prefs['drawerOpen'] ?? false;
         $previewTargetPreferences = $prefs['previewTargets'] ?? [];
         $this->selectedPreviewTargetId = $previewTargetPreferences[$content->space_id] ?? $this->selectedPreviewTargetId;
         $this->touchPresence();
@@ -271,8 +271,13 @@ class Editor extends Component
 
     public function updateContent($field, $value)
     {
-        $this->markSaving();
+        $normalizedValue = $field === 'parent_id' ? ($value ?: null) : $value;
 
+        if ($this->content->getAttribute($field) == $normalizedValue) {
+            return;
+        }
+
+        $this->markSaving();
         $lifecycle = app(ContentLifecycle::class);
         $this->createUndoCheckpoint('Before page edit', ['operation' => 'update_content', 'field' => $field]);
 
@@ -359,10 +364,15 @@ class Editor extends Component
 
     public function updateContentMeta($key, $value)
     {
+        $meta = $this->content->meta ?? [];
+
+        if (($meta[$key] ?? null) == $value) {
+            return;
+        }
+
         $this->markSaving();
         $this->createUndoCheckpoint('Before metadata edit', ['operation' => 'update_content_meta', 'field' => $key]);
 
-        $meta = $this->content->meta ?? [];
         $meta[$key] = $value;
         $this->content->update([
             'meta' => $meta,
@@ -372,18 +382,38 @@ class Editor extends Component
         $this->markSaved();
     }
 
+    public function updateContentTypeField(string $key, mixed $value, bool $translatable = false): void
+    {
+        if ($translatable) {
+            $existing = $this->content->meta[$key] ?? [];
+
+            if ((is_array($existing) ? ($existing['en'] ?? null) : $existing) == $value) {
+                return;
+            }
+
+            $value = array_merge(is_array($existing) ? $existing : [], ['en' => $value]);
+        }
+
+        $this->updateContentMeta($key, $value);
+    }
+
     public function updateTaxonomy(string $field, string $value): void
     {
-        $this->markSaving();
-
         if (! in_array($field, ['categories', 'tags'], true)) {
             return;
         }
 
+        $values = $this->taxonomyValuesFromString($value);
+
+        if (($this->content->getAttribute($field) ?? []) == $values) {
+            return;
+        }
+
+        $this->markSaving();
         $this->createUndoCheckpoint('Before taxonomy edit', ['operation' => 'update_taxonomy', 'field' => $field]);
 
         app(ContentLifecycle::class)->updateContent($this->content, [
-            $field => $this->taxonomyValuesFromString($value),
+            $field => $values,
         ], auth()->id());
 
         $this->content->refresh();
@@ -422,12 +452,16 @@ class Editor extends Component
 
     public function updateBlock($blockId, $fieldKey, $value)
     {
-        $this->markSaving();
-
         $block = Block::findOrFail($blockId);
+        $data = $block->data ?? [];
+
+        if (($data[$fieldKey] ?? null) == $value) {
+            return;
+        }
+
+        $this->markSaving();
         $this->createUndoCheckpoint('Before block edit', ['operation' => 'update_block', 'block_id' => $block->id, 'field' => $fieldKey]);
 
-        $data = $block->data ?? [];
         $data[$fieldKey] = $value;
         $block->update(['data' => $data]);
         $this->syncReusableBlockInstances($block);
@@ -437,8 +471,33 @@ class Editor extends Component
 
         $this->updateLoadedBlockData((int) $blockId, $data);
         $this->selectedBlockId = $blockId;
-        $this->markSaved();
+        $patchPreview = $this->isPreviewPatchableBlockField($block, (string) $fieldKey, $value);
+        $this->markSaved(refreshPreview: ! $patchPreview);
+
+        if ($patchPreview) {
+            $this->dispatch(
+                'preview-field-patch',
+                blockId: (int) $block->id,
+                fieldKey: (string) $fieldKey,
+                value: $value,
+                fallbackUrl: $this->previewFrameUrl,
+            );
+        }
+
         $this->skipRender();
+    }
+
+    protected function isPreviewPatchableBlockField(Block $block, string $fieldKey, mixed $value): bool
+    {
+        if (! is_scalar($value) && $value !== null) {
+            return false;
+        }
+
+        $blockType = $this->blockTypes[$block->type] ?? null;
+        $field = collect($blockType?->schema['fields'] ?? [])
+            ->first(fn (array $field): bool => ($field['key'] ?? null) === $fieldKey);
+
+        return in_array($field['type'] ?? null, ['text', 'textarea'], true);
     }
 
     public function deleteBlock($blockId)
@@ -950,7 +1009,7 @@ class Editor extends Component
         $this->revisionsPerPage = 20;
     }
 
-    protected function markSaved(): void
+    protected function markSaved(bool $refreshPreview = true): void
     {
         $this->content->refresh();
         $this->lastKnownContentUpdatedAt = $this->content->updated_at?->toJSON();
@@ -961,7 +1020,10 @@ class Editor extends Component
         $this->savedJustNow = true;
         $this->previewVersion++;
         $this->dispatch('saved');
-        $this->dispatchPreviewFrameRefresh();
+
+        if ($refreshPreview) {
+            $this->dispatchPreviewFrameRefresh();
+        }
     }
 
     protected function markSaving(): void
@@ -1063,7 +1125,13 @@ class Editor extends Component
             return;
         }
         $fieldKey = is_array($payload) ? ($payload['fieldKey'] ?? $payload[0] ?? '') : $payload;
-        $this->dispatch('open-asset-picker', fieldKey: $fieldKey)->to(AssetPickerModal::class);
+        $upload = is_array($payload) && (bool) ($payload['upload'] ?? false);
+        $this->dispatch(
+            'open-asset-picker',
+            fieldKey: $fieldKey,
+            upload: $upload,
+            spaceId: $this->content->space_id,
+        )->to(AssetPickerModal::class);
     }
 
     public function handleAssetSelected($payload = null)
@@ -1073,6 +1141,16 @@ class Editor extends Component
         }
         $fieldKey = $payload['fieldKey'] ?? $payload[0] ?? null;
         $asset = $payload['asset'] ?? $payload[1] ?? null;
+
+        if ($fieldKey && $asset && str_starts_with((string) $fieldKey, 'content-meta:')) {
+            $url = is_array($asset) ? ($asset['url'] ?? '') : ($asset->url ?? '');
+            $this->updateContentMeta(
+                str_after((string) $fieldKey, 'content-meta:'),
+                Asset::toRelativeUrl($url),
+            );
+
+            return;
+        }
 
         if ($fieldKey && $asset && $this->selectedBlockId) {
             $url = is_array($asset) ? ($asset['url'] ?? '') : ($asset->url ?? '');
@@ -1345,22 +1423,20 @@ class Editor extends Component
         return $this->selectedBlockId ? $this->findBlockInTree((int) $this->selectedBlockId) : null;
     }
 
-    public function getPreviewUrlProperty(): string
+    public function getPreviewUrlProperty(): ?string
     {
         $target = $this->selectedPreviewTarget();
 
-        return $target ? $target->previewUrlFor($this->content) : route('admin.content.preview', $this->content);
+        return $target?->previewUrlFor($this->content);
     }
 
-    public function getPreviewFrameUrlProperty(): string
+    public function getPreviewFrameUrlProperty(): ?string
     {
         $target = $this->selectedPreviewTarget();
 
-        if ($target) {
-            return $this->appendPreviewFrameParameters($target->previewUrlFor($this->content));
-        }
-
-        return $this->appendPreviewFrameParameters(route('admin.content.preview', ['content' => $this->content]));
+        return $target
+            ? $this->appendPreviewFrameParameters($target->previewUrlFor($this->content))
+            : null;
     }
 
     protected function selectedPreviewTarget()
@@ -1380,7 +1456,7 @@ class Editor extends Component
 
         return $url.$separator.http_build_query([
             'v' => $this->previewVersion,
-            'pilot_in_context' => 0,
+            'pilot_in_context' => 1,
             'pilot_in_context_panel' => 0,
             'pilot_selected_block' => $this->selectedBlockId ? (int) $this->selectedBlockId : '',
         ]);

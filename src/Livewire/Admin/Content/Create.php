@@ -4,6 +4,7 @@ namespace Pilot\Core\Livewire\Admin\Content;
 
 use Illuminate\Support\Str;
 use Livewire\Component;
+use Pilot\Core\Models\Activity;
 use Pilot\Core\Models\Content;
 use Pilot\Core\Models\ContentType;
 use Pilot\Core\Models\Space;
@@ -72,6 +73,15 @@ class Create extends Component
             'created_by' => auth()->id(),
             'updated_by' => auth()->id(),
             'published_at' => null,
+        ]);
+
+        Activity::create([
+            'space_id' => $content->space_id,
+            'user_id' => auth()->id(),
+            'action' => 'created',
+            'subject_type' => Content::class,
+            'subject_id' => $content->id,
+            'meta' => ['subject_name' => $content->name],
         ]);
 
         session()->flash('toast', [

@@ -4,15 +4,19 @@ namespace Pilot\Core\Livewire\Admin\Content;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use JsonException;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 use Pilot\Core\Models\Activity;
 use Pilot\Core\Models\Content;
 use Pilot\Core\Models\Space;
+use Pilot\Core\Support\Cms\SpaceTransfer;
+use Throwable;
 
 class Index extends Component
 {
-    use WithPagination;
+    use WithFileUploads, WithPagination;
 
     public $selectedFolderId = null;
 
@@ -26,6 +30,10 @@ class Index extends Component
     public $sortBy = 'updated_at';
 
     public $sortDir = 'desc';
+
+    public bool $showImportModal = false;
+
+    public $importFile = null;
 
     protected $queryString = [
         'search' => ['except' => ''],
@@ -215,6 +223,54 @@ class Index extends Component
 
         $content->delete();
         $this->dispatch('content-deleted');
+    }
+
+    public function exportContent(SpaceTransfer $transfer)
+    {
+        abort_unless(auth()->user()?->can('view content'), 403);
+        abort_unless($this->space, 404);
+        $document = $transfer->exportContent($this->space);
+
+        return response()->streamDownload(
+            fn () => print json_encode($document, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
+            "pilot-{$this->space->slug}-content-".now()->format('Y-m-d').'.json',
+            ['Content-Type' => 'application/json'],
+        );
+    }
+
+    public function openImportModal(): void
+    {
+        abort_unless(auth()->user()?->can('create content'), 403);
+        $this->resetValidation();
+        $this->importFile = null;
+        $this->showImportModal = true;
+    }
+
+    public function importContent(SpaceTransfer $transfer): void
+    {
+        abort_unless(auth()->user()?->can('create content'), 403);
+        abort_unless($this->space, 404);
+        $this->validate(['importFile' => ['required', 'file', 'max:10240']]);
+
+        try {
+            $document = json_decode($this->importFile->get(), true, 512, JSON_THROW_ON_ERROR);
+            if (! is_array($document)) {
+                throw new JsonException;
+            }
+            $result = $transfer->importContent($this->space, $document, auth()->id());
+        } catch (JsonException $exception) {
+            $this->addError('importFile', 'The selected file is not valid JSON.');
+
+            return;
+        } catch (Throwable $exception) {
+            $this->addError('importFile', $exception->getMessage());
+
+            return;
+        }
+
+        $this->importFile = null;
+        $this->showImportModal = false;
+        $this->dispatch('toast', message: "Imported {$result['contents']} content items and {$result['blocks']} blocks.");
     }
 
     protected function filteredContentQuery(): Builder

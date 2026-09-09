@@ -65,7 +65,7 @@
                             <option value="expired">Expired rights</option>
                         </flux:select>
                     </div>
-                    <flux:button wire:click="$set('showUploadModal', true)" variant="primary" size="sm">
+                    <flux:button wire:click="openUploadModal" variant="primary" size="sm">
                         <flux:icon.arrow-up-tray class="size-4" />
                         Upload
                     </flux:button>
@@ -93,7 +93,7 @@
                     <button
                         type="button"
                         wire:click="openAssetDetail({{ $asset->id }})"
-                        class="group relative block w-full overflow-hidden rounded-xl bg-card text-left shadow-xs outline outline-1 -outline-offset-1 outline-[color:var(--border-subtle)] transition-[box-shadow,transform] duration-fast ease-standard hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:shadow-ring"
+                        class="group relative block w-full overflow-hidden rounded-xl bg-card text-left shadow-xs dark:shadow-sm outline outline-1 -outline-offset-1 outline-[color:var(--border-subtle)] transition-[box-shadow,transform] duration-fast ease-standard hover:-translate-y-0.5 hover:shadow-md dark:hover:shadow-md focus-visible:outline-none focus-visible:shadow-ring"
                         aria-label="Open {{ $asset->displayName() }} details"
                     >
                         <div class="relative aspect-[4/3] overflow-hidden bg-sunken">
@@ -168,7 +168,7 @@
                         </div>
                         <flux:heading size="md" class="mt-4">No assets in this folder</flux:heading>
                         <flux:text class="mt-2 text-center text-sm text-muted-foreground max-w-sm">Upload images, videos, or documents to use in your content.</flux:text>
-                        <flux:button wire:click="$set('showUploadModal', true)" variant="primary" class="mt-6">
+                        <flux:button wire:click="openUploadModal" variant="primary" class="mt-6">
                             <flux:icon.arrow-up-tray class="size-4" />
                             Upload assets
                         </flux:button>
@@ -428,12 +428,21 @@
 {{-- Upload Modal --}}
 <flux:modal wire:model="showUploadModal">
     <flux:heading size="lg">Upload Assets</flux:heading>
-    <form wire:submit="uploadAssets" class="mt-4 space-y-4">
+    <form
+        wire:submit="uploadAssets"
+        class="mt-4 space-y-4"
+        x-data="{ preparingFiles: false }"
+        x-on:livewire-upload-start="preparingFiles = true"
+        x-on:livewire-upload-finish="preparingFiles = false"
+        x-on:livewire-upload-error="preparingFiles = false"
+        x-on:livewire-upload-cancel="preparingFiles = false"
+    >
         <flux:field>
             <flux:label>Files</flux:label>
-            <input type="file" wire:model="uploadFiles" multiple class="block w-full text-sm text-zinc-500 file:me-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-zinc-100 file:text-zinc-800 dark:file:bg-zinc-700 dark:file:text-zinc-200 file:cursor-pointer">
+            <input wire:key="asset-upload-input-{{ $uploadInputKey }}" type="file" wire:model="uploadFiles" multiple class="block w-full text-sm text-zinc-500 file:me-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-zinc-100 file:text-zinc-800 dark:file:bg-zinc-700 dark:file:text-zinc-200 file:cursor-pointer">
             <flux:error name="uploadFiles.*" />
-            <flux:description>Photos, videos, and documents. Max 50MB per file. Wait for files to finish uploading before clicking Upload.</flux:description>
+            <flux:description x-show="! preparingFiles">Photos, videos, and documents. Max 50MB per file.</flux:description>
+            <flux:description x-show="preparingFiles" x-cloak>Preparing selected files...</flux:description>
         </flux:field>
 
         @if($uploadFiles)
@@ -445,10 +454,10 @@
         @endif
 
         <div class="flex justify-end gap-3">
-            <flux:button type="button" wire:click="$set('showUploadModal', false)" variant="ghost">Cancel</flux:button>
-            <flux:button type="submit" variant="primary" wire:loading.attr="disabled" wire:target="uploadFiles,uploadAssets">
-                <span wire:loading.remove wire:target="uploadFiles,uploadAssets">Upload</span>
-                <span wire:loading wire:target="uploadFiles,uploadAssets">Uploading...</span>
+            <flux:button type="button" wire:click="closeUploadModal" variant="ghost">Cancel</flux:button>
+            <flux:button type="submit" variant="primary" :disabled="empty($uploadFiles)" x-bind:disabled="preparingFiles" wire:loading.attr="disabled" wire:target="uploadAssets">
+                <span wire:loading.remove wire:target="uploadAssets">Upload</span>
+                <span wire:loading wire:target="uploadAssets">Uploading...</span>
             </flux:button>
         </div>
     </form>

@@ -14,9 +14,9 @@
         list="{{ $listId }}"
         placeholder="{{ $placeholder ?: 'Type a URL or search internal pages' }}"
         @if(isset($repeaterIndex) && isset($subFieldKey))
-            wire:change="updateRepeaterField(@js($fieldKey), {{ $repeaterIndex }}, @js($subFieldKey), $event.target.value)"
+            wire:blur="updateRepeaterField(@js($fieldKey), {{ $repeaterIndex }}, @js($subFieldKey), $event.target.value)"
         @else
-            wire:change="updateField(@js($fieldKey), $event.target.value)"
+            wire:blur="updateField(@js($fieldKey), $event.target.value)"
         @endif
         class="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-700 shadow-sm outline-none transition-[border-color,box-shadow,background-color] duration-fast placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
     />

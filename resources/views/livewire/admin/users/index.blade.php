@@ -23,7 +23,7 @@
                         <button
                             type="button"
                             wire:click="$set('search', '{{ $role->name }}')"
-                            class="rounded-sm border border-default bg-card p-4 text-left shadow-xs transition-[background-color,border-color,box-shadow] hover:border-strong hover:bg-hover hover:shadow-sm"
+                            class="rounded-sm border border-default bg-card p-4 text-left shadow-xs dark:shadow-sm transition-[background-color,border-color,box-shadow] hover:border-strong hover:bg-hover hover:shadow-sm dark:hover:shadow-md"
                         >
                             <div class="flex items-center justify-between gap-3">
                                 <p class="text-sm font-semibold text-slate-900">{{ $role->name }}</p>

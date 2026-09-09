@@ -7,10 +7,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Storage;
+use Pilot\Core\Contracts\AssetImageUrlGenerator;
 
 class Asset extends Model
 {
     use HasFactory;
+
+    protected static function booted(): void
+    {
+        static::updated(function (Asset $asset): void {
+            if ($asset->wasChanged(['path', 'checksum', 'focal_x', 'focal_y'])) {
+                $asset->deleteImageTransformations();
+            }
+        });
+
+        static::deleted(fn (Asset $asset) => $asset->deleteImageTransformations());
+    }
 
     protected $fillable = [
         'space_id',
@@ -84,6 +96,56 @@ class Asset extends Model
         }
 
         return static::toRelativeUrl($this->url());
+    }
+
+    public function imageUrl(int $width, int $height, array $options = []): string
+    {
+        return app(AssetImageUrlGenerator::class)->url($this, [
+            ...$options,
+            'width' => $width,
+            'height' => $height,
+        ]);
+    }
+
+    public function imageTransformUrl(): string
+    {
+        return app(AssetImageUrlGenerator::class)->url($this);
+    }
+
+    public function deliveryUrl(): string
+    {
+        if (! $this->isImage() || $this->mime === 'image/svg+xml' || ! $this->hasConfiguredDisk()) {
+            return $this->relativeUrl();
+        }
+
+        return $this->imageTransformUrl();
+    }
+
+    public function imageCacheVersion(): string
+    {
+        $sourceVersion = $this->checksum ?: implode('|', [
+            $this->path,
+            $this->size,
+            $this->width,
+            $this->height,
+        ]);
+
+        return substr(hash('sha256', implode('|', [
+            $sourceVersion,
+            $this->focalX(),
+            $this->focalY(),
+        ])), 0, 16);
+    }
+
+    public function deleteImageTransformations(): void
+    {
+        if (! $this->getKey()) {
+            return;
+        }
+
+        if ($this->hasConfiguredDisk()) {
+            Storage::disk($this->disk)->deleteDirectory("assets/transforms/{$this->getKey()}");
+        }
     }
 
     public function thumbnailUrl(): string

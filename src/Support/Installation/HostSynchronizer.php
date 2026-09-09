@@ -34,8 +34,25 @@ class HostSynchronizer
 
         $this->replace(
             $basePath.'/routes/web.php',
-            ['use App\\Http\\Controllers\\Site\\PageController;'],
-            'use Pilot\\Core\\Http\\Controllers\\Site\\PageController;',
+            [
+                "use App\\Http\\Controllers\\Site\\PageController;\n",
+                "use App\\Http\\Controllers\\Site\\PageController;\r\n",
+                "use Pilot\\Core\\Http\\Controllers\\Site\\PageController;\n",
+                "use Pilot\\Core\\Http\\Controllers\\Site\\PageController;\r\n",
+            ],
+            '',
+            $changes,
+        );
+
+        $this->replace(
+            $basePath.'/routes/web.php',
+            [
+                "Route::get('/', [PageController::class, 'home'])->name('home');\n",
+                "Route::get('/', [PageController::class, 'home'])->name('home');\r\n",
+                "Route::get('/{slug}', [PageController::class, 'show'])\n    ->where('slug', '.*')\n    ->name('site.page');\n",
+                "Route::get('/{slug}', [PageController::class, 'show'])\r\n    ->where('slug', '.*')\r\n    ->name('site.page');\r\n",
+            ],
+            '',
             $changes,
         );
 
@@ -142,7 +159,7 @@ class HostSynchronizer
             $changes,
         );
 
-        return $changes;
+        return array_values(array_unique($changes));
     }
 
     /** @param list<string> $changes */

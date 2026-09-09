@@ -7,16 +7,19 @@ use Illuminate\Http\Request;
 use Pilot\Core\Http\Controllers\Controller;
 use Pilot\Core\Http\Resources\Cms\ContentResource;
 use Pilot\Core\Models\CmsSetting;
+use Pilot\Core\Support\Cms\ContentCollectionResolver;
 use Pilot\Laravel\Models\Content;
 use Pilot\Laravel\Models\Space;
 use Pilot\Laravel\Support\ContentRenderer;
 
 class ContentController extends Controller
 {
+    public function __construct(private readonly ContentCollectionResolver $contentCollections) {}
+
     public function index(Request $request, ContentRenderer $renderer, $spaceSlug): JsonResponse
     {
         $space = Space::where('slug', $spaceSlug)->firstOrFail();
-        $locale = $request->get('locale', CmsSetting::get('default_locale', 'en'));
+        $locale = $request->get('locale', CmsSetting::get('default_locale', config('cms.default_locale', 'en')));
         $version = $request->get('version', 'published');
 
         $query = Content::where('space_id', $space->id)
@@ -50,7 +53,7 @@ class ContentController extends Controller
     public function show(Request $request, ContentRenderer $renderer, $spaceSlug, $slug): JsonResponse
     {
         $space = Space::where('slug', $spaceSlug)->firstOrFail();
-        $locale = $request->get('locale', CmsSetting::get('default_locale', 'en'));
+        $locale = $request->get('locale', CmsSetting::get('default_locale', config('cms.default_locale', 'en')));
         $version = $request->get('version', 'published');
 
         $query = Content::where('space_id', $space->id)
@@ -87,7 +90,12 @@ class ContentController extends Controller
      */
     protected function renderedContent(Content $content, ContentRenderer $renderer, string $locale): array
     {
-        return array_merge($renderer->fromModel($content, $locale)->toArray(), [
+        $rendered = $renderer->fromModel($content, $locale)->toArray();
+        $blocks = $this->contentCollections->resolveBlocks($rendered['body'] ?? [], $content, $locale);
+        $rendered['body'] = $blocks;
+        $rendered['content']['body'] = $blocks;
+
+        return array_merge($rendered, [
             'categories' => $this->taxonomyValues($content, 'categories'),
             'tags' => $this->taxonomyValues($content, 'tags'),
         ]);

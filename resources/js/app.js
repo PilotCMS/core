@@ -255,209 +255,38 @@ const registerPilotRichTextEditor = () => {
 
     window.Alpine.data('pilotRichTextEditor', (config) => ({
         html: config.value || '',
-        lastSavedHtml: null,
-        placeholder: config.placeholder || '',
+        lastSavedHtml: config.value || '',
         fieldKey: config.fieldKey,
         repeaterIndex: config.repeaterIndex,
         subFieldKey: config.subFieldKey,
         isRepeaterField: Boolean(config.isRepeaterField),
-        sourceMode: false,
         expanded: false,
-        saveTimer: null,
-        active: {
-            bold: false,
-            italic: false,
-            underline: false,
-            link: false,
-            ol: false,
-            ul: false,
-            block: 'p',
-            align: 'left',
-        },
+        editor: null,
 
-        init() {
-            this.html = this.normalizeInitialHtml(this.html);
+        handleReady(event) {
+            if (event.target !== this.$refs.editor) {
+                return;
+            }
+
+            this.editor = event.detail.editor;
+            this.html = this.currentHtml();
             this.lastSavedHtml = this.html;
-            this.$refs.editor.innerHTML = this.html;
-            this.refreshState();
-        },
-
-        normalizeInitialHtml(value) {
-            const trimmed = String(value || '').trim();
-
-            if (trimmed === '') {
-                return '';
-            }
-
-            if (/<[a-z][\s\S]*>/i.test(trimmed)) {
-                return this.sanitizeHtml(trimmed);
-            }
-
-            return this.plainTextToHtml(trimmed);
         },
 
         handleInput() {
-            this.html = this.sanitizeHtml(this.activeEditor().innerHTML);
-            this.queueSave();
-            this.refreshState();
+            this.html = this.currentHtml();
         },
 
-        handlePaste(event) {
-            const clipboard = event.clipboardData || window.clipboardData;
-            const html = clipboard?.getData('text/html');
-            const text = clipboard?.getData('text/plain') || '';
-            const content = html ? this.sanitizeHtml(html) : this.plainTextToHtml(text);
-
-            this.insertHtml(content);
-            this.handleInput();
-        },
-
-        placeCaretFromPointer(event) {
-            if (event.button !== 0 || this.sourceMode) {
-                return;
+        currentHtml() {
+            if (this.editor) {
+                return this.editor.isEmpty ? '' : this.editor.getHTML();
             }
 
-            const editor = this.activeEditor();
-
-            requestAnimationFrame(() => {
-                if (document.activeElement !== editor) {
-                    return;
-                }
-
-                let pointRange = document.caretRangeFromPoint?.(event.clientX, event.clientY);
-
-                if (! pointRange && document.caretPositionFromPoint) {
-                    const position = document.caretPositionFromPoint(event.clientX, event.clientY);
-
-                    if (position) {
-                        pointRange = document.createRange();
-                        pointRange.setStart(position.offsetNode, position.offset);
-                        pointRange.collapse(true);
-                    }
-                }
-
-                if (! pointRange || ! editor.contains(pointRange.startContainer)) {
-                    return;
-                }
-
-                const selection = window.getSelection();
-
-                if (! selection) {
-                    return;
-                }
-
-                selection.removeAllRanges();
-                selection.addRange(pointRange);
-                this.refreshState();
-            });
-        },
-
-        runCommand(command, value = null) {
-            this.focusEditor();
-            document.execCommand('styleWithCSS', false, true);
-            document.execCommand(command, false, value);
-            this.handleInput();
-        },
-
-        formatBlock(tag) {
-            this.runCommand('formatBlock', tag);
-        },
-
-        blockLabel() {
-            return {
-                p: 'Body',
-                blockquote: 'Quote',
-                h2: 'Heading 2',
-                h3: 'Heading 3',
-                h4: 'Heading 4',
-                h5: 'Heading 5',
-                h6: 'Heading 6',
-            }[this.active.block] || 'Body';
-        },
-
-        createLink() {
-            this.focusEditor();
-
-            const existingLink = this.closestTag('a');
-            const currentHref = existingLink?.getAttribute('href') || '';
-            const href = window.prompt('Paste a URL', currentHref);
-
-            if (href === null) {
-                return;
-            }
-
-            const cleanHref = href.trim();
-
-            if (cleanHref === '') {
-                this.runCommand('unlink');
-                return;
-            }
-
-            this.runCommand('createLink', cleanHref);
-        },
-
-        toggleSource() {
-            if (this.sourceMode) {
-                this.html = this.sanitizeHtml(this.html);
-                this.activeEditor().innerHTML = this.html;
-                this.sourceMode = false;
-                this.queueSave();
-                this.$nextTick(() => this.focusEditor());
-                return;
-            }
-
-            this.html = this.sanitizeHtml(this.activeEditor().innerHTML);
-            this.sourceMode = true;
-            this.$nextTick(() => this.activeSource().focus());
-        },
-
-        openExpandedEditor() {
-            this.expanded = true;
-            this.$store.pilotRichTextWorkspace.expanded = true;
-
-            this.$nextTick(() => {
-                if (this.sourceMode) {
-                    this.$refs.source.focus();
-                    return;
-                }
-
-                this.$refs.editor.focus();
-                this.refreshState();
-            });
-        },
-
-        closeExpandedEditor() {
-            if (! this.expanded) {
-                return;
-            }
-
-            this.expanded = false;
-            this.$store.pilotRichTextWorkspace.expanded = false;
-            this.flush();
-            this.$nextTick(() => this.$refs.editor.focus());
-        },
-
-        destroy() {
-            this.$store.pilotRichTextWorkspace.expanded = false;
-        },
-
-        queueSave() {
-            clearTimeout(this.saveTimer);
-            this.saveTimer = setTimeout(() => this.flush(), 450);
+            return this.$refs.editor?.value || '';
         },
 
         flush() {
-            clearTimeout(this.saveTimer);
-            const editor = this.activeEditor();
-            this.html = this.sanitizeHtml(this.sourceMode ? this.html : editor.innerHTML);
-
-            // Replacing innerHTML while the contenteditable is focused destroys
-            // the browser selection and moves the caret back to the beginning.
-            // Normalize the DOM only after focus leaves the editor; autosave can
-            // persist the sanitized value without rewriting the active surface.
-            if (! this.sourceMode && document.activeElement !== editor && editor.innerHTML !== this.html) {
-                editor.innerHTML = this.html;
-            }
+            this.html = this.currentHtml();
 
             if (this.html === this.lastSavedHtml) {
                 return;
@@ -473,162 +302,29 @@ const registerPilotRichTextEditor = () => {
             this.$wire.updateField(this.fieldKey, this.html);
         },
 
-        focusEditor() {
-            if (this.sourceMode) {
-                this.toggleSource();
+        openExpandedEditor() {
+            this.expanded = true;
+            this.$store.pilotRichTextWorkspace.expanded = true;
+            this.$nextTick(() => this.$refs.editor?.focus());
+        },
+
+        closeExpandedEditor(restoreFocus = true) {
+            if (! this.expanded) {
+                return;
             }
 
-            this.activeEditor().focus();
-        },
+            this.expanded = false;
+            this.$store.pilotRichTextWorkspace.expanded = false;
+            this.flush();
 
-        activeEditor() {
-            return this.$refs.editor;
-        },
-
-        activeSource() {
-            return this.$refs.source;
-        },
-
-        insertHtml(html) {
-            this.focusEditor();
-            document.execCommand('insertHTML', false, html);
-        },
-
-        refreshState() {
-            this.active.bold = document.queryCommandState('bold');
-            this.active.italic = document.queryCommandState('italic');
-            this.active.underline = document.queryCommandState('underline');
-            this.active.ol = document.queryCommandState('insertOrderedList');
-            this.active.ul = document.queryCommandState('insertUnorderedList');
-            this.active.link = Boolean(this.closestTag('a'));
-            this.active.block = this.currentBlock();
-            this.active.align = this.currentAlignment();
-
-        },
-
-        isBlock(tag) {
-            return this.active.block === tag;
-        },
-
-        currentBlock() {
-            const block = this.closestTag('h2,h3,h4,h5,h6,blockquote,li,p,div');
-            const tag = block?.tagName?.toLowerCase() || 'p';
-
-            return tag === 'div' || tag === 'li' ? 'p' : tag;
-        },
-
-        currentAlignment() {
-            if (document.queryCommandState('justifyCenter')) {
-                return 'center';
+            if (restoreFocus) {
+                this.$nextTick(() => this.$refs.editor?.focus());
             }
-
-            if (document.queryCommandState('justifyRight')) {
-                return 'right';
-            }
-
-            return 'left';
         },
 
-        closestTag(selector) {
-            const selection = window.getSelection();
-
-            if (! selection || selection.rangeCount === 0) {
-                return null;
-            }
-
-            const node = selection.anchorNode?.nodeType === Node.TEXT_NODE
-                ? selection.anchorNode.parentElement
-                : selection.anchorNode;
-
-            if (! node || ! this.activeEditor().contains(node)) {
-                return null;
-            }
-
-            return node.closest(selector);
-        },
-
-        plainTextToHtml(text) {
-            return String(text || '')
-                .split(/\n{2,}/)
-                .map((paragraph) => paragraph.trim())
-                .filter(Boolean)
-                .map((paragraph) => `<p>${this.escapeHtml(paragraph).replace(/\n/g, '<br>')}</p>`)
-                .join('');
-        },
-
-        sanitizeHtml(html) {
-            const template = document.createElement('template');
-            template.innerHTML = String(html || '');
-            const allowedTags = new Set(['A', 'B', 'BLOCKQUOTE', 'BR', 'EM', 'H2', 'H3', 'H4', 'H5', 'H6', 'I', 'LI', 'OL', 'P', 'SPAN', 'STRONG', 'U', 'UL']);
-            const allowedAttrs = new Set(['href', 'target', 'rel', 'style']);
-
-            template.content.querySelectorAll('*').forEach((node) => {
-                if (! allowedTags.has(node.tagName)) {
-                    node.replaceWith(...Array.from(node.childNodes));
-                    return;
-                }
-
-                Array.from(node.attributes).forEach((attribute) => {
-                    if (! allowedAttrs.has(attribute.name)) {
-                        node.removeAttribute(attribute.name);
-                    }
-                });
-
-                if (node.hasAttribute('style')) {
-                    const safeStyle = this.sanitizeStyle(node.getAttribute('style'));
-
-                    if (safeStyle === '') {
-                        node.removeAttribute('style');
-                    } else {
-                        node.setAttribute('style', safeStyle);
-                    }
-                }
-
-                if (node.tagName === 'A') {
-                    const href = node.getAttribute('href') || '';
-
-                    if (! /^(https?:|mailto:|tel:|\/|#)/i.test(href)) {
-                        node.removeAttribute('href');
-                    }
-
-                    node.setAttribute('rel', 'noopener noreferrer');
-                }
-            });
-
-            return template.innerHTML
-                .replace(/<p>(\s|&nbsp;|<br>)*<\/p>/gi, '')
-                .trim();
-        },
-
-        sanitizeStyle(style) {
-            return String(style || '')
-                .split(';')
-                .map((declaration) => declaration.trim())
-                .filter(Boolean)
-                .map((declaration) => {
-                    const [property, ...valueParts] = declaration.split(':');
-                    const name = property?.trim().toLowerCase();
-                    const value = valueParts.join(':').trim().toLowerCase();
-
-                    if (name === 'color' && (/^#[0-9a-f]{3,8}$/i.test(value) || /^rgb(a)?\([\d\s,.%]+\)$/i.test(value))) {
-                        return `color: ${value}`;
-                    }
-
-                    if (name === 'text-align' && ['left', 'center', 'right'].includes(value)) {
-                        return `text-align: ${value}`;
-                    }
-
-                    return null;
-                })
-                .filter(Boolean)
-                .join('; ');
-        },
-
-        escapeHtml(value) {
-            const div = document.createElement('div');
-            div.textContent = value;
-
-            return div.innerHTML;
+        destroy() {
+            this.$store.pilotRichTextWorkspace.expanded = false;
+            this.editor = null;
         },
     }));
 };

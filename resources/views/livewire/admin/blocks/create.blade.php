@@ -28,7 +28,9 @@
                     ['type' => 'image', 'label' => 'Image', 'desc' => 'Asset reference'],
                     ['type' => 'reference', 'label' => 'Reference', 'desc' => 'Content relationship'],
                     ['type' => 'select', 'label' => 'Select', 'desc' => 'Choose from options'],
+                    ['type' => 'multiselect', 'label' => 'Multiselect', 'desc' => 'Search and choose multiple'],
                     ['type' => 'repeater', 'label' => 'Repeater', 'desc' => 'Repeatable group'],
+                    ['type' => 'content_collection', 'label' => 'Content Collection', 'desc' => 'Query and map content'],
                 ];
             @endphp
 
@@ -170,7 +172,9 @@
                             <option value="image">Image</option>
                             <option value="reference">Reference</option>
                             <option value="select">Select</option>
+                            <option value="multiselect">Combobox / Multiselect</option>
                             <option value="repeater">Repeater</option>
+                            <option value="content_collection">Content Collection</option>
                         </flux:select>
                     </flux:field>
 
@@ -194,6 +198,7 @@
                         <flux:textarea wire:model="schema.fields.{{ $selectedFieldIndex }}.help" rows="2"></flux:textarea>
                     </flux:field>
 
+                    @if(!in_array(($schema['fields'][$selectedFieldIndex]['type'] ?? ''), ['content_collection', 'multiselect'], true))
                     <div class="grid grid-cols-2 gap-4">
                         <flux:field>
                             <flux:label>Default</flux:label>
@@ -215,6 +220,7 @@
                             <flux:input type="number" wire:model="schema.fields.{{ $selectedFieldIndex }}.max" />
                         </flux:field>
                     </div>
+                    @endif
 
                     <div class="flex items-center gap-4">
                         <flux:field>
@@ -225,27 +231,55 @@
                         </flux:field>
                     </div>
 
-                    @if(($schema['fields'][$selectedFieldIndex]['type'] ?? '') === 'select')
+                    @if(in_array(($schema['fields'][$selectedFieldIndex]['type'] ?? ''), ['select', 'multiselect'], true))
                         <div class="space-y-3">
-                            <div class="flex items-center justify-between">
-                                <flux:label>Options</flux:label>
-                                <flux:button type="button" wire:click="addOption({{ $selectedFieldIndex }})" variant="ghost" size="xs">
-                                    <flux:icon.plus class="size-4" />
-                                    Add Option
-                                </flux:button>
-                            </div>
-                            <div class="space-y-2">
-                                @foreach($schema['fields'][$selectedFieldIndex]['options'] ?? [] as $optionIndex => $option)
-                                    <div class="grid grid-cols-[1fr_1fr_auto] gap-2">
-                                        <flux:input wire:model="schema.fields.{{ $selectedFieldIndex }}.options.{{ $optionIndex }}.value" placeholder="value" />
-                                        <flux:input wire:model="schema.fields.{{ $selectedFieldIndex }}.options.{{ $optionIndex }}.label" placeholder="Label" />
-                                        <flux:button type="button" wire:click="removeOption({{ $selectedFieldIndex }}, {{ $optionIndex }})" variant="ghost" size="xs" class="text-red-600">
-                                            <flux:icon.trash class="size-4" />
-                                        </flux:button>
-                                    </div>
-                                @endforeach
-                            </div>
+                            <flux:field>
+                                <flux:label>Option source</flux:label>
+                                <flux:select wire:model.live="schema.fields.{{ $selectedFieldIndex }}.option_source">
+                                    <option value="inline">Inline options</option>
+                                    <option value="datasource">Datasource</option>
+                                </flux:select>
+                            </flux:field>
+
+                            @if(($schema['fields'][$selectedFieldIndex]['option_source'] ?? 'inline') === 'datasource')
+                                <flux:field>
+                                    <flux:label>Datasource</flux:label>
+                                    <flux:select wire:model="schema.fields.{{ $selectedFieldIndex }}.datasource" placeholder="Choose a datasource">
+                                        @foreach($datasources->groupBy(fn ($datasource) => $datasource->space?->name ?? 'Unassigned') as $spaceName => $spaceDatasources)
+                                            <optgroup label="{{ $spaceName }}">
+                                                @foreach($spaceDatasources as $datasource)
+                                                    <option value="{{ $datasource->slug }}">{{ $datasource->name }} ({{ $datasource->slug }})</option>
+                                                @endforeach
+                                            </optgroup>
+                                        @endforeach
+                                    </flux:select>
+                                    <flux:description>Entries become the available choices. Matching slugs resolve within the content's space.</flux:description>
+                                </flux:field>
+                            @else
+                                <div class="flex items-center justify-between">
+                                    <flux:label>Options</flux:label>
+                                    <flux:button type="button" wire:click="addOption({{ $selectedFieldIndex }})" variant="ghost" size="xs">
+                                        <flux:icon.plus class="size-4" />
+                                        Add Option
+                                    </flux:button>
+                                </div>
+                                <div class="space-y-2">
+                                    @foreach($schema['fields'][$selectedFieldIndex]['options'] ?? [] as $optionIndex => $option)
+                                        <div class="grid grid-cols-[1fr_1fr_auto] gap-2">
+                                            <flux:input wire:model="schema.fields.{{ $selectedFieldIndex }}.options.{{ $optionIndex }}.value" placeholder="value" />
+                                            <flux:input wire:model="schema.fields.{{ $selectedFieldIndex }}.options.{{ $optionIndex }}.label" placeholder="Label" />
+                                            <flux:button type="button" wire:click="removeOption({{ $selectedFieldIndex }}, {{ $optionIndex }})" variant="ghost" size="xs" class="text-red-600">
+                                                <flux:icon.trash class="size-4" />
+                                            </flux:button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
                         </div>
+                    @endif
+
+                    @if(($schema['fields'][$selectedFieldIndex]['type'] ?? '') === 'content_collection')
+                        @include('livewire.admin.blocks.partials.content-collection-settings')
                     @endif
                 </div>
             @else

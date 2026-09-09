@@ -1,4 +1,6 @@
 @php
+    $extensionRegistry = app(\Pilot\Core\Extensions\ExtensionRegistry::class);
+
     $workspaceItems = [
         ['route' => 'admin.dashboard', 'active' => 'admin.dashboard', 'icon' => 'layout-dashboard', 'label' => 'Dashboard'],
         ['route' => 'admin.content.index', 'active' => 'admin.content.*', 'icon' => 'files', 'label' => 'Content'],
@@ -7,17 +9,23 @@
         ['route' => 'admin.content-types.index', 'active' => 'admin.content-types.*', 'icon' => 'panels-top-left', 'label' => 'Content types'],
         ['route' => 'admin.datasources.index', 'active' => 'admin.datasources.*', 'icon' => 'database', 'label' => 'Datasources'],
     ];
+    $workspaceItems = array_merge($workspaceItems, $extensionRegistry->navigationItems('workspace'));
 
     $adminItems = [
         ['route' => 'admin.spaces.index', 'active' => 'admin.spaces.*', 'icon' => 'layers-3', 'label' => 'Spaces'],
         ['route' => 'admin.users.index', 'active' => 'admin.users.*', 'icon' => 'users', 'label' => 'Users', 'can' => 'manage users'],
         ['route' => 'admin.settings.index', 'active' => 'admin.settings.*', 'icon' => 'settings', 'label' => 'Settings'],
     ];
+    $adminItems = array_merge($adminItems, $extensionRegistry->navigationItems('admin'));
+    $settingsItems = array_values(array_filter(
+        $extensionRegistry->navigationItems('settings'),
+        fn (array $item): bool => ! isset($item['can']) || auth()->user()->can($item['can']),
+    ));
 
-    $navLinkClasses = function (string $activePattern): string {
+    $navLinkClasses = function (string $activePattern, bool $forceActive = false): string {
         $base = 'cms-nav-item group flex items-center gap-2 px-[9px] text-[13px] leading-[19.5px] tracking-[-0.154px] transition-colors duration-100';
 
-        return request()->routeIs($activePattern)
+        return $forceActive || request()->routeIs($activePattern)
             ? $base . ' cms-nav-item--active bg-selected text-primary font-medium'
             : $base . ' cms-nav-item--inactive hover:bg-hover hover:text-primary';
     };
@@ -57,6 +65,7 @@
         </button>
         <div x-show="workspaceOpen" class="px-2">
             @foreach ($workspaceItems as $item)
+                @continue(isset($item['can']) && auth()->user()->cannot($item['can']))
                 @php $isActive = request()->routeIs($item['active']); @endphp
                 <a href="{{ route($item['route']) }}" class="{{ $navLinkClasses($item['active']) }}" wire:navigate>
                     <x-jaunt.icon :name="$item['icon']" size="sm" class="!h-[15px] !w-[15px] {{ $isActive ? 'text-primary' : 'text-tertiary group-hover:text-secondary' }}" />
@@ -72,11 +81,28 @@
         <div x-show="adminOpen" class="px-2">
             @foreach ($adminItems as $item)
                 @continue(isset($item['can']) && auth()->user()->cannot($item['can']))
-                @php $isActive = request()->routeIs($item['active']); @endphp
-                <a href="{{ route($item['route']) }}" class="{{ $navLinkClasses($item['active']) }}" wire:navigate>
+                @php
+                    $isSettingsItem = $item['route'] === 'admin.settings.index';
+                    $hasActiveSettingsChild = $isSettingsItem && collect($settingsItems)->contains(
+                        fn (array $settingsItem): bool => request()->routeIs($settingsItem['active']),
+                    );
+                    $isActive = request()->routeIs($item['active']) || $hasActiveSettingsChild;
+                @endphp
+                <a href="{{ route($item['route']) }}" class="{{ $navLinkClasses($item['active'], $hasActiveSettingsChild) }}" wire:navigate>
                     <x-jaunt.icon :name="$item['icon']" size="sm" class="!h-[15px] !w-[15px] {{ $isActive ? 'text-primary' : 'text-tertiary group-hover:text-secondary' }}" />
                     <span class="min-w-0 flex-1 truncate">{{ $item['label'] }}</span>
                 </a>
+                @if($isSettingsItem && $settingsItems !== [])
+                    <div class="ml-[16px] border-l border-subtle pl-1" aria-label="Settings extensions" data-pilot-settings-navigation>
+                        @foreach($settingsItems as $settingsItem)
+                            @php $isSettingsChildActive = request()->routeIs($settingsItem['active']); @endphp
+                            <a href="{{ route($settingsItem['route']) }}" class="{{ $navLinkClasses($settingsItem['active']) }} !pl-[9px] text-[12px]" wire:navigate>
+                                <x-jaunt.icon :name="$settingsItem['icon']" size="xs" class="{{ $isSettingsChildActive ? 'text-primary' : 'text-tertiary group-hover:text-secondary' }}" />
+                                <span class="min-w-0 flex-1 truncate">{{ $settingsItem['label'] }}</span>
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
             @endforeach
         </div>
     </div>

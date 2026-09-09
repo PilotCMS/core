@@ -3,20 +3,14 @@
 namespace Pilot\Core\Livewire\Admin\Settings;
 
 use Illuminate\Contracts\View\View;
-use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Pilot\Core\Models\CmsSetting;
-use Pilot\Core\Models\Space;
 use Pilot\Core\Support\Updates\PilotUpdateChecker;
 use Pilot\Core\Support\Updates\PilotUpdateManager;
 use RuntimeException;
 
 class Index extends Component
 {
-    public string $defaultSpace = '';
-
-    public string $homeSlug = 'home';
-
     public string $defaultLocale = 'en';
 
     public bool $draftApiEnabled = true;
@@ -35,9 +29,7 @@ class Index extends Component
 
     public function mount(PilotUpdateChecker $checker, PilotUpdateManager $manager): void
     {
-        $this->defaultSpace = CmsSetting::get('default_space', config('cms.default_space', '')) ?? '';
-        $this->homeSlug = CmsSetting::get('home_slug', config('cms.home_slug', 'home'));
-        $this->defaultLocale = CmsSetting::get('default_locale', 'en');
+        $this->defaultLocale = CmsSetting::get('default_locale', config('cms.default_locale', 'en'));
         $this->draftApiEnabled = (bool) CmsSetting::get('draft_api_enabled', true);
         $this->previewLinksEnabled = (bool) CmsSetting::get('preview_links_enabled', true);
         $this->previewExpirationMinutes = (int) CmsSetting::get('preview_expiration_minutes', 60);
@@ -83,8 +75,6 @@ class Index extends Component
         $this->authorizeSettingsManagement();
 
         $validated = $this->validate([
-            'defaultSpace' => ['nullable', 'string', Rule::exists('spaces', 'slug')],
-            'homeSlug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9][a-z0-9\/_-]*$/i'],
             'defaultLocale' => ['required', 'string', 'max:12', 'regex:/^[a-z]{2}([_-][A-Z]{2})?$/'],
             'draftApiEnabled' => ['boolean'],
             'previewLinksEnabled' => ['boolean'],
@@ -92,8 +82,6 @@ class Index extends Component
         ]);
 
         CmsSetting::setMany([
-            'default_space' => $validated['defaultSpace'] ?: null,
-            'home_slug' => $validated['homeSlug'],
             'default_locale' => $validated['defaultLocale'],
             'draft_api_enabled' => $validated['draftApiEnabled'],
             'preview_links_enabled' => $validated['previewLinksEnabled'],
@@ -107,16 +95,12 @@ class Index extends Component
     {
         $this->authorizeSettingsManagement();
 
-        $this->defaultSpace = config('cms.default_space', '') ?? '';
-        $this->homeSlug = config('cms.home_slug', 'home');
-        $this->defaultLocale = 'en';
+        $this->defaultLocale = config('cms.default_locale', 'en');
         $this->draftApiEnabled = true;
         $this->previewLinksEnabled = true;
         $this->previewExpirationMinutes = 60;
 
         CmsSetting::query()->whereIn('key', [
-            'default_space',
-            'home_slug',
             'default_locale',
             'draft_api_enabled',
             'preview_links_enabled',
@@ -130,7 +114,6 @@ class Index extends Component
     public function render(): View
     {
         return view('livewire.admin.settings.index', [
-            'spaces' => Space::query()->orderBy('name')->get(),
             'settings' => CmsSetting::query()
                 ->whereNotIn('key', ['preview_secret'])
                 ->orderBy('key')

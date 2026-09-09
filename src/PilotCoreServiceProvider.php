@@ -23,6 +23,8 @@ use Pilot\Core\Console\Commands\PublishScheduledContent;
 use Pilot\Core\Console\Commands\RunPilotUpdateInBackground;
 use Pilot\Core\Console\Commands\SyncPilotHost;
 use Pilot\Core\Console\Commands\UpdatePilot;
+use Pilot\Core\Contracts\AssetImageUrlGenerator;
+use Pilot\Core\Extensions\ExtensionRegistry;
 use Pilot\Core\Livewire\Admin\Assets\AssetPickerModal;
 use Pilot\Core\Livewire\Admin\Assets\Index;
 use Pilot\Core\Livewire\Admin\Blocks\Create;
@@ -39,10 +41,23 @@ class PilotCoreServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(ExtensionRegistry::class);
+
         $this->app['config']->set('cms', require __DIR__.'/../config/cms.php');
         $this->app['config']->set('installation', require __DIR__.'/../config/installation.php');
         $this->app['config']->set('fortify', require __DIR__.'/../config/fortify.php');
         $this->app['config']->set('lighthouse.schema_path', __DIR__.'/../graphql/schema.graphql');
+        $this->app['config']->set('pilot.preview.routes', false);
+        $this->app->singleton(AssetImageUrlGenerator::class, function ($app) {
+            $driver = (string) $app['config']->get('cms.images.driver', 'local');
+            $generator = $app['config']->get("cms.images.drivers.{$driver}");
+
+            if (! is_string($generator) || ! is_a($generator, AssetImageUrlGenerator::class, true)) {
+                throw new \InvalidArgumentException("Unsupported Pilot image driver [{$driver}].");
+            }
+
+            return $app->make($generator);
+        });
         $this->app->register(FortifyServiceProvider::class);
     }
 
@@ -98,6 +113,10 @@ class PilotCoreServiceProvider extends ServiceProvider
 
         if (config('cms.routes.api', true)) {
             $this->loadRoutesFrom(__DIR__.'/../routes/api.php');
+        }
+
+        if (config('cms.routes.images', true)) {
+            $this->loadRoutesFrom(__DIR__.'/../routes/images.php');
         }
 
         if (config('cms.routes.setup', true)) {

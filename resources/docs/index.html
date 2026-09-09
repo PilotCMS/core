@@ -507,22 +507,20 @@
                 <section id="overview">
                     <h2>Overview</h2>
                     <p>
-                        Pilot is a Laravel-based, Storyblok-style CMS. The CMS owns editorial data. A Laravel frontend,
-                        either the CMS application itself or a separate Laravel site, renders that data using Blade
-                        components. The connector package provides the integration surface between those two systems.
+                        Pilot is a Laravel-based, Storyblok-style CMS. The CMS owns editorial data and exposes it
+                        through REST and GraphQL APIs. A separate Laravel application can render that data using Blade
+                        components with the connector package providing the integration surface between the systems.
                     </p>
                     <p>
-                        The default development setup in this repository keeps everything in one application:
-                        content models, admin UI, public theme rendering, REST delivery, GraphQL delivery, preview
-                        routes, and the package source for the Laravel connector. A production setup may keep the CMS
-                        and the website separate, with the website depending on <code>pilot/laravel</code>.
+                        Core contains the content models, admin UI, REST delivery, GraphQL delivery, and signed draft
+                        preview APIs. It does not register client-facing page routes or own a website theme. Laravel
+                        websites install <code>pilot/laravel</code>; other clients consume the delivery APIs directly.
                     </p>
 
                     <div class="note">
                         <strong>Source of truth.</strong>
                         <p>
-                            The connector package in this repository is located at <code>packages/pilot-laravel</code>.
-                            Its package name is <code>pilot/laravel</code>, and its service provider is
+                            The connector is distributed as the <code>pilot/laravel</code> package, and its service provider is
                             <code>Pilot\Laravel\PilotServiceProvider</code>.
                         </p>
                     </div>
@@ -548,14 +546,9 @@
                                 <td><code>routes/api.php</code>, <code>app/Http/Controllers/Api</code>, <code>graphql/schema.graphql</code></td>
                             </tr>
                             <tr>
-                                <td>Theme rendering</td>
-                                <td>Maps normalized block payloads to Blade views.</td>
-                                <td><code>resources/views/themes/{theme}</code>, <code>config/cms.php</code></td>
-                            </tr>
-                            <tr>
                                 <td>Laravel connector</td>
-                                <td>Installs reusable helpers, config, views, preview routes, and Incontext endpoints in a Laravel frontend.</td>
-                                <td><code>packages/pilot-laravel</code></td>
+                                <td>Installs reusable helpers, config, views, preview routes, and Incontext endpoints in a separate Laravel frontend.</td>
+                                <td><code>pilot/laravel</code></td>
                             </tr>
                         </tbody>
                     </table>
@@ -628,15 +621,10 @@
                 <section id="installation-paths">
                     <h2>Installation Paths</h2>
                     <p>
-                        There are two supported ways to install Pilot for development and implementation work.
-                        Choose the path that matches your deployment model.
+                        Install Pilot as the CMS, then choose the frontend integration that matches your application.
                     </p>
 
                     <div class="cards">
-                        <section class="card">
-                            <h3>Single Laravel app</h3>
-                            <p>Use this repository as both the CMS and the public rendering app. This is fastest for local development and theme work.</p>
-                        </section>
                         <section class="card">
                             <h3>CMS plus Laravel site</h3>
                             <p>Run Pilot as the CMS and install <code>pilot/laravel</code> into a separate Laravel frontend.</p>
@@ -710,18 +698,10 @@ DB_DATABASE=&lt;path-to-database&gt;/database.sqlite</code></pre>
                         <li>
                             <h3>Configure Pilot CMS defaults</h3>
                             <p>
-                                The CMS application reads public rendering defaults from <code>config/cms.php</code>.
-                                Set the default space and home slug so the public routes can resolve the correct page.
+                                The CMS reads API delivery defaults from <code>config/cms.php</code>. Set the default
+                                locale used when an API request does not explicitly provide one.
                             </p>
-                            <pre><code class="language-dotenv">CMS_DEFAULT_SPACE=main
-CMS_HOME_SLUG=home
-CMS_DELIVERY_SOURCE=mysql
-CMS_THEME=default</code></pre>
-                            <p>
-                                Some historical notes in the repository use <code>PILOT_DEFAULT_SPACE</code> and
-                                <code>PILOT_HOME_SLUG</code>. Those names are used by the connector package. For the
-                                CMS application's own <code>config/cms.php</code>, use the <code>CMS_</code> keys.
-                            </p>
+                            <pre><code class="language-dotenv">CMS_DEFAULT_LOCALE=en</code></pre>
                         </li>
 
                         <li>
@@ -747,8 +727,8 @@ CMS_THEME=default</code></pre>
                         </li>
 
                         <li>
-                            <h3>Build frontend assets</h3>
-                            <p>Build static assets for production or run Vite during development.</p>
+                            <h3>Build admin assets</h3>
+                            <p>Build the CMS admin assets for production or run Vite during development.</p>
                             <pre><code class="language-bash">npm run build</code></pre>
                             <p>For active development:</p>
                             <pre><code class="language-bash">npm run dev</code></pre>
@@ -1379,12 +1359,10 @@ PILOT_IN_CONTEXT_PATH=_pilot/in-context</code></pre>
                     <h3>Full test suite</h3>
                     <pre><code class="language-bash">php artisan test --compact</code></pre>
 
-                    <h3>Public rendering and preview tests</h3>
+                    <h3>Delivery and preview tests</h3>
                     <pre><code class="language-bash">php artisan test --compact \
-  tests/Feature/PublicThemeTest.php \
   tests/Feature/CmsDeliveryApiTest.php \
-  tests/Feature/CmsLivePreviewTest.php \
-  tests/Feature/Admin/ContentPreviewTest.php</code></pre>
+  tests/Feature/SpacePreviewTargetsTest.php</code></pre>
 
                     <h3>Package-focused tests</h3>
                     <pre><code class="language-bash">php artisan test --compact tests/Feature/SpacePreviewTargetsTest.php</code></pre>
@@ -1415,7 +1393,7 @@ PILOT_IN_CONTEXT_PATH=_pilot/in-context</code></pre>
 
                     <h3>The CMS loads but styles are missing</h3>
                     <p>
-                        Build frontend assets or run the Vite dev server. In production, deploy the generated
+                        Build admin assets or run the Vite dev server. In production, deploy the generated
                         <code>public/build</code> assets.
                     </p>
                     <pre><code class="language-bash">npm run build</code></pre>
@@ -1511,8 +1489,7 @@ PILOT_IN_CONTEXT_PATH=_pilot/in-context</code></pre>
                     <pre><code class="language-http">GET /api/v1/spaces/{space}/contents?locale=en&amp;version=published
 GET /api/v1/spaces/{space}/contents/{slug}?locale=en&amp;version=published
 GET /api/v1/spaces/{space}/contents/{slug}?locale=en&amp;version=draft
-GET /api/v1/preview/{content}?signature=...&amp;expires=...
-POST /api/v1/preview/render</code></pre>
+GET /api/v1/preview/{content}?signature=...&amp;expires=...</code></pre>
 
                     <h3>Connector routes</h3>
                     <pre><code class="language-http">GET   /_pilot/preview/{content}

@@ -22,7 +22,7 @@
         request()->routeIs('user-password.edit') => 'Password Settings',
         request()->routeIs('two-factor.show') => 'Two-Factor Authentication',
         request()->routeIs('appearance.edit') => 'Appearance Settings',
-        default => null,
+        default => app(\Pilot\Core\Extensions\ExtensionRegistry::class)->pageTitleFor(request()),
     };
 
     $browserTitle = $title ?? $cmsTitle;

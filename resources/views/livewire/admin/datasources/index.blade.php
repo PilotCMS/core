@@ -1,14 +1,24 @@
 <div class="cms-drawer-page flex min-h-0 w-full min-w-0 flex-1 flex-col bg-gray-50">
     <x-jaunt.shell.dynamic-header title="Datasources" subtitle="Manage reusable option lists for block fields." top="0px" as="header" scroll-target="#datasources-scroll" aria-label="Page header">
         <x-slot:actions>
-        @can('manage datasources')
             <div class="cms-actions pb-0.5">
-                <button type="button" wire:click="openCreateDatasource" class="cms-btn cms-btn-primary">
-                    <x-jaunt.icon name="plus" size="sm" />
-                    New datasource
-                </button>
+                @can('view datasources')
+                    <button type="button" wire:click="exportDatasources" class="cms-btn cms-btn-secondary" @disabled(! $spaceId)>
+                        <x-jaunt.icon name="download" size="sm" />
+                        Export
+                    </button>
+                @endcan
+                @can('manage datasources')
+                    <button type="button" wire:click="openImportModal" class="cms-btn cms-btn-secondary" @disabled(! $spaceId)>
+                        <x-jaunt.icon name="upload" size="sm" />
+                        Import
+                    </button>
+                    <button type="button" wire:click="openCreateDatasource" class="cms-btn cms-btn-primary">
+                        <x-jaunt.icon name="plus" size="sm" />
+                        New datasource
+                    </button>
+                @endcan
             </div>
-        @endcan
         </x-slot:actions>
     </x-jaunt.shell.dynamic-header>
 
@@ -308,6 +318,30 @@
                 <flux:button type="button" wire:click="$set('showCreateModal', false)" variant="ghost">Cancel</flux:button>
                 <flux:button type="submit" variant="primary">
                     Create datasource
+                </flux:button>
+            </div>
+        </form>
+    </flux:modal>
+
+    <flux:modal wire:model="showImportModal">
+        <div class="space-y-1">
+            <flux:heading size="lg">Import datasources</flux:heading>
+            <flux:text class="text-sm text-slate-500">Import a Pilot JSON export into the selected space. Matching datasource slugs are updated and their entries replaced.</flux:text>
+        </div>
+
+        <form wire:submit="importDatasources" class="mt-5 space-y-4">
+            <flux:field>
+                <flux:label>JSON file</flux:label>
+                <input type="file" wire:model="importFile" accept="application/json,.json" class="block w-full text-sm text-zinc-500 file:me-4 file:rounded-lg file:border-0 file:bg-zinc-100 file:px-4 file:py-2 file:text-zinc-800 file:cursor-pointer">
+                <flux:error name="importFile" />
+                <flux:description>Maximum file size: 10 MB.</flux:description>
+            </flux:field>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <flux:button type="button" wire:click="$set('showImportModal', false)" variant="ghost">Cancel</flux:button>
+                <flux:button type="submit" variant="primary" wire:loading.attr="disabled" wire:target="importFile,importDatasources">
+                    <span wire:loading.remove wire:target="importFile,importDatasources">Import datasources</span>
+                    <span wire:loading wire:target="importFile,importDatasources">Importing…</span>
                 </flux:button>
             </div>
         </form>

@@ -17,62 +17,70 @@
 <div
     wire:ignore
     class="pilot-richtext"
+    style="--pilot-richtext-min-height: {{ $minHeight }}px"
     x-bind:class="{ 'is-expanded': expanded }"
     x-bind:data-expanded="expanded ? 'true' : 'false'"
     x-on:keydown.escape.window="closeExpandedEditor()"
+    x-on:pilot-close-expanded-richtext.window="closeExpandedEditor($event.detail?.restoreFocus ?? true)"
+    x-on:flux:editor:ready="handleReady($event)"
     x-data="pilotRichTextEditor({
         value: @js((string) $value),
-        placeholder: @js($placeholder),
         fieldKey: @js($fieldKey),
         repeaterIndex: @js($repeaterIndex),
         subFieldKey: @js($subFieldKey),
         isRepeaterField: @js($isRepeaterField),
     })"
-    x-init="init()"
 >
-    @include('livewire.admin.content.partials.richtext-toolbar')
+    <flux:editor
+        x-ref="editor"
+        :value="(string) $value"
+        :placeholder="$placeholder"
+        class="pilot-richtext-control"
+        x-on:input="handleInput()"
+        x-on:blur="flush()"
+    >
+        <flux:editor.toolbar class="pilot-richtext-toolbar">
+            <div class="pilot-richtext-toolgroup pilot-richtext-toolgroup-style">
+                <flux:editor.heading />
+            </div>
 
-    <div class="pilot-richtext-body">
-        <div
-            x-show="! sourceMode"
-            x-ref="editor"
-            class="pilot-richtext-surface"
-            style="min-height: {{ $minHeight }}px"
-            contenteditable="true"
-            role="textbox"
-            aria-multiline="true"
-            x-bind:data-placeholder="placeholder"
-            x-on:input="handleInput()"
-            x-on:blur="flush()"
-            x-on:keyup="refreshState()"
-            x-on:mouseup="refreshState()"
-            x-on:pointerup="placeCaretFromPointer($event)"
-            x-on:paste.prevent="handlePaste($event)"
-        ></div>
+            <div class="pilot-richtext-toolgroup">
+                <flux:editor.bold />
+                <flux:editor.italic />
+                <flux:editor.underline />
+            </div>
 
-        <textarea
-            x-show="sourceMode"
-            x-ref="source"
-            x-model="html"
-            x-on:input="queueSave()"
-            x-on:blur="flush()"
-            rows="{{ $rows }}"
-            class="pilot-richtext-source"
-            spellcheck="false"
-        ></textarea>
+            <div class="pilot-richtext-toolgroup">
+                <flux:editor.bullet />
+                <flux:editor.ordered />
+                <flux:editor.align />
+            </div>
 
-        <div class="pilot-richtext-expand-dock">
-            <button
-                type="button"
-                x-on:click="expanded ? closeExpandedEditor() : openExpandedEditor()"
-                class="pilot-richtext-expand-button"
-                x-bind:title="expanded ? 'Collapse editor' : 'Expand editor'"
-                x-bind:aria-label="expanded ? 'Collapse rich text editor' : 'Expand rich text editor'"
-                x-bind:aria-pressed="expanded"
-            >
-                <span x-show="expanded"><x-jaunt.icon name="minimize-2" size="sm" /></span>
-                <span x-show="! expanded"><x-jaunt.icon name="maximize-2" size="sm" /></span>
-            </button>
-        </div>
-    </div>
+            <div class="pilot-richtext-toolgroup">
+                <flux:editor.blockquote />
+                <flux:editor.link />
+            </div>
+
+            <div class="pilot-richtext-toolgroup pilot-richtext-toolgroup-history">
+                <flux:editor.undo />
+                <flux:editor.redo />
+            </div>
+
+            <div class="pilot-richtext-toolgroup pilot-richtext-toolgroup-action">
+                <button
+                    type="button"
+                    x-on:click="expanded ? closeExpandedEditor() : openExpandedEditor()"
+                    class="pilot-richtext-expand-button"
+                    x-bind:title="expanded ? 'Collapse editor' : 'Expand editor'"
+                    x-bind:aria-label="expanded ? 'Collapse rich text editor' : 'Expand rich text editor'"
+                    x-bind:aria-pressed="expanded"
+                >
+                    <span x-show="expanded"><x-jaunt.icon name="minimize-2" size="sm" /></span>
+                    <span x-show="! expanded"><x-jaunt.icon name="maximize-2" size="sm" /></span>
+                </button>
+            </div>
+        </flux:editor.toolbar>
+
+        <flux:editor.content />
+    </flux:editor>
 </div>

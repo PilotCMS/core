@@ -11,7 +11,7 @@ use Pilot\Core\Models\Asset;
 use Pilot\Core\Models\AssetFolder;
 use Pilot\Core\Models\AssetTag;
 use Pilot\Core\Models\Space;
-use Pilot\Core\Support\Cms\AssetThumbnailer;
+use Pilot\Core\Support\Cms\AssetUploader;
 use Pilot\Core\Support\Cms\AssetUsageFinder;
 
 class Index extends Component
@@ -23,6 +23,8 @@ class Index extends Component
     public $folderId = null;
 
     public $uploadFiles = [];
+
+    public int $uploadInputKey = 0;
 
     public $showUploadModal = false;
 
@@ -76,6 +78,22 @@ class Index extends Component
         $this->spaceId = $space?->id;
     }
 
+    public function openUploadModal(): void
+    {
+        $this->resetValidation('uploadFiles');
+        $this->reset('uploadFiles');
+        $this->uploadInputKey++;
+        $this->showUploadModal = true;
+    }
+
+    public function closeUploadModal(): void
+    {
+        $this->resetValidation('uploadFiles');
+        $this->reset('uploadFiles');
+        $this->uploadInputKey++;
+        $this->showUploadModal = false;
+    }
+
     public function uploadAssets()
     {
         if (! $this->spaceId) {
@@ -94,51 +112,14 @@ class Index extends Component
             'uploadFiles.*' => 'file|max:51200', // 50MB max for videos
         ]);
 
-        // Ensure the assets directory exists on the public disk
-        Storage::disk('public')->makeDirectory('assets');
-
         $uploadCount = count($this->uploadFiles);
 
         foreach ($this->uploadFiles as $file) {
-            $path = $file->store('assets', 'public');
-
-            if ($path === false) {
-                $this->addError('uploadFiles', 'Failed to store file: '.$file->getClientOriginalName());
-
-                continue;
-            }
-
-            [$width, $height] = $this->imageDimensions($file->getRealPath());
-
-            $asset = Asset::create([
-                'space_id' => $this->spaceId,
-                'folder_id' => $this->folderId ?: null,
-                'disk' => 'public',
-                'path' => $path,
-                'filename' => $file->getClientOriginalName(),
-                'mime' => $file->getMimeType(),
-                'size' => $file->getSize(),
-                'width' => $width,
-                'height' => $height,
-                'checksum' => hash_file('sha256', $file->getRealPath()),
-                'metadata' => [
-                    'client_original_name' => $file->getClientOriginalName(),
-                    'client_extension' => $file->getClientOriginalExtension(),
-                    'client_mime' => $file->getClientMimeType(),
-                ],
-            ]);
-
-            app(AssetThumbnailer::class)->generate($asset);
+            app(AssetUploader::class)->store($file, (int) $this->spaceId, $this->folderId ?: null);
         }
 
-        $this->uploadFiles = [];
-        $this->showUploadModal = false;
-        session()->flash('toast', [
-            'message' => $uploadCount === 1 ? 'Asset uploaded' : "{$uploadCount} assets uploaded",
-            'type' => 'success',
-        ]);
-
-        return $this->redirect(route('admin.assets.index'), navigate: true);
+        $this->closeUploadModal();
+        $this->dispatch('toast', message: $uploadCount === 1 ? 'Asset uploaded' : "{$uploadCount} assets uploaded");
     }
 
     public function openAssetDetail($assetId)
@@ -333,20 +314,6 @@ class Index extends Component
             'selectedAsset' => $selectedAsset,
             'selectedAssetUsage' => $selectedAssetUsage,
         ])->layout('layouts.admin');
-    }
-
-    /**
-     * @return array{0: int|null, 1: int|null}
-     */
-    protected function imageDimensions(string $path): array
-    {
-        $dimensions = @getimagesize($path);
-
-        if ($dimensions === false) {
-            return [null, null];
-        }
-
-        return [(int) $dimensions[0], (int) $dimensions[1]];
     }
 
     /**

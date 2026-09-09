@@ -9,6 +9,18 @@
     >
         <x-slot:actions>
         <div class="cms-actions pb-0.5">
+            @can('view content')
+                <button type="button" wire:click="exportContent" class="cms-btn cms-btn-secondary" @disabled(! $this->space)>
+                    <x-jaunt.icon name="download" size="sm" />
+                    Export
+                </button>
+            @endcan
+            @can('create content')
+                <button type="button" wire:click="openImportModal" class="cms-btn cms-btn-secondary" @disabled(! $this->space)>
+                    <x-jaunt.icon name="upload" size="sm" />
+                    Import
+                </button>
+            @endcan
             <button type="button" x-on:click="activityOpen = true" class="cms-btn cms-btn-secondary" aria-haspopup="dialog" x-bind:aria-expanded="activityOpen">
                 <x-jaunt.icon name="activity" size="sm" />
                 Activity
@@ -201,4 +213,28 @@
             </div>
         </aside>
     </div>
+
+    <flux:modal wire:model="showImportModal">
+        <div class="space-y-1">
+            <flux:heading size="lg">Import content</flux:heading>
+            <flux:text class="text-sm text-secondary">Import a Pilot JSON export into this space. Matching content is updated, blocks are replaced, and other content is left unchanged.</flux:text>
+        </div>
+
+        <form wire:submit="importContent" class="mt-5 space-y-4">
+            <flux:field>
+                <flux:label>JSON file</flux:label>
+                <input type="file" wire:model="importFile" accept="application/json,.json" class="block w-full text-sm text-zinc-500 file:me-4 file:rounded-lg file:border-0 file:bg-zinc-100 file:px-4 file:py-2 file:text-zinc-800 file:cursor-pointer">
+                <flux:error name="importFile" />
+                <flux:description>Required content types must already exist. Maximum file size: 10 MB.</flux:description>
+            </flux:field>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <flux:button type="button" wire:click="$set('showImportModal', false)" variant="ghost">Cancel</flux:button>
+                <flux:button type="submit" variant="primary" wire:loading.attr="disabled" wire:target="importFile,importContent">
+                    <span wire:loading.remove wire:target="importFile,importContent">Import content</span>
+                    <span wire:loading wire:target="importFile,importContent">Importing…</span>
+                </flux:button>
+            </div>
+        </form>
+    </flux:modal>
 </div>

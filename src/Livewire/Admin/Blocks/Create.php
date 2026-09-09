@@ -5,6 +5,8 @@ namespace Pilot\Core\Livewire\Admin\Blocks;
 use Illuminate\Support\Str;
 use Livewire\Component;
 use Pilot\Core\Models\BlockType;
+use Pilot\Core\Models\ContentType;
+use Pilot\Core\Models\Datasource;
 
 class Create extends Component
 {
@@ -44,6 +46,23 @@ class Create extends Component
     {
         $this->schema['fields'][] = $this->defaultFieldForType($type);
         $this->selectedFieldIndex = count($this->schema['fields']) - 1;
+    }
+
+    public function updatedSchema(mixed $value, string $key): void
+    {
+        if (! preg_match('/^fields\.(\d+)\.type$/', $key, $matches)) {
+            return;
+        }
+
+        $index = (int) $matches[1];
+        $type = (string) $value;
+        $defaults = $this->defaultFieldForType($type);
+        $existingOptions = $this->schema['fields'][$index]['options'] ?? [];
+
+        $this->schema['fields'][$index]['default'] = $defaults['default'];
+        $this->schema['fields'][$index]['options'] = in_array($type, ['select', 'multiselect'], true)
+            ? ($existingOptions ?: $defaults['options'])
+            : [];
     }
 
     public function removeField($index)
@@ -95,6 +114,17 @@ class Create extends Component
         $this->schema['fields'][$fieldIndex]['options'] = array_values($this->schema['fields'][$fieldIndex]['options']);
     }
 
+    public function addMapping(int $fieldIndex): void
+    {
+        $this->schema['fields'][$fieldIndex]['mappings'][] = ['target' => '', 'source' => ''];
+    }
+
+    public function removeMapping(int $fieldIndex, int $mappingIndex): void
+    {
+        unset($this->schema['fields'][$fieldIndex]['mappings'][$mappingIndex]);
+        $this->schema['fields'][$fieldIndex]['mappings'] = array_values($this->schema['fields'][$fieldIndex]['mappings']);
+    }
+
     protected function defaultFieldForType(string $type): array
     {
         return [
@@ -103,14 +133,34 @@ class Create extends Component
             'label' => '',
             'translatable' => false,
             'required' => false,
-            'default' => $type === 'boolean' ? false : '',
+            'default' => match ($type) {
+                'boolean' => false,
+                'multiselect' => [],
+                'content_collection' => $this->defaultContentCollectionQuery(),
+                default => '',
+            },
             'placeholder' => '',
             'help' => '',
             'min' => null,
             'max' => null,
             'rows' => $type === 'textarea' ? 4 : 3,
-            'options' => $type === 'select' ? [['value' => '', 'label' => '']] : [],
+            'options' => in_array($type, ['select', 'multiselect'], true) ? [['value' => '', 'label' => '']] : [],
+            'option_source' => 'inline',
+            'datasource' => null,
             'reference_type' => $type === 'reference' ? 'content' : null,
+            'source_content_type' => null,
+            'mappings' => $type === 'content_collection' ? [['target' => '', 'source' => '']] : [],
+        ];
+    }
+
+    protected function defaultContentCollectionQuery(): array
+    {
+        return [
+            'categories' => [],
+            'tags' => [],
+            'limit' => 6,
+            'order_by' => 'published_at',
+            'order_direction' => 'desc',
         ];
     }
 
@@ -133,7 +183,10 @@ class Create extends Component
 
     public function render()
     {
-        return view('livewire.admin.blocks.create')
+        return view('livewire.admin.blocks.create', [
+            'contentTypes' => ContentType::query()->where('is_active', true)->orderBy('name')->get(),
+            'datasources' => Datasource::query()->with('space')->orderBy('name')->get(),
+        ])
             ->layout('layouts.admin');
     }
 }

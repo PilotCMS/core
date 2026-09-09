@@ -133,7 +133,7 @@ $seedColumns = collect($columns)->map(function ($col) {
                         @dragend="onDragEnd()"
                         @dragover.prevent.stop
                         @drop.prevent.stop="onDropOnCard(col.id, card)"
-                        class="flex flex-col gap-2 bg-card border border-[color:var(--border-default)] rounded-md px-3 py-2.5 shadow-xs cursor-grab active:cursor-grabbing transition-[box-shadow,transform] duration-fast ease-standard hover:shadow-sm hover:border-strong"
+                        class="flex flex-col gap-2 bg-card border border-[color:var(--border-default)] rounded-md px-3 py-2.5 shadow-xs dark:shadow-sm cursor-grab active:cursor-grabbing transition-[box-shadow,transform] duration-fast ease-standard hover:shadow-sm dark:hover:shadow-md hover:border-strong"
                         :class="dragCardId === card.id ? 'opacity-50' : ''"
                     >
                         <div class="flex flex-wrap gap-1.5" x-show="card.tags && card.tags.length">

@@ -3,6 +3,7 @@
 
     $currentLabel = match (true) {
         request()->routeIs('admin.dashboard') => 'Dashboard',
+        request()->routeIs('admin.activity.*') => 'Activity',
         request()->routeIs('admin.content.index') => 'Content',
         request()->routeIs('admin.content.create') => 'New content',
         request()->routeIs('admin.content-types.*') => 'Content types',

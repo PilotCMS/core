@@ -5,13 +5,19 @@ namespace Pilot\Core\Livewire\Admin\Datasources;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use JsonException;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Pilot\Core\Models\Datasource;
 use Pilot\Core\Models\DatasourceEntry;
 use Pilot\Core\Models\Space;
+use Pilot\Core\Support\Cms\SpaceTransfer;
+use Throwable;
 
 class Index extends Component
 {
+    use WithFileUploads;
+
     public ?int $spaceId = null;
 
     public string $search = '';
@@ -37,6 +43,10 @@ class Index extends Component
     public string $editEntryKey = '';
 
     public string $editEntryValue = '';
+
+    public bool $showImportModal = false;
+
+    public $importFile = null;
 
     public function mount(): void
     {
@@ -269,6 +279,54 @@ class Index extends Component
     {
         $this->authorizeDatasourceManagement();
         $this->moveEntry($entryId, 1);
+    }
+
+    public function exportDatasources(SpaceTransfer $transfer)
+    {
+        abort_unless(auth()->user()?->can('view datasources'), 403);
+        $space = Space::findOrFail($this->spaceId);
+        $document = $transfer->exportDatasources($space);
+
+        return response()->streamDownload(
+            fn () => print json_encode($document, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
+            "pilot-{$space->slug}-datasources-".now()->format('Y-m-d').'.json',
+            ['Content-Type' => 'application/json'],
+        );
+    }
+
+    public function openImportModal(): void
+    {
+        $this->authorizeDatasourceManagement();
+        $this->resetValidation();
+        $this->importFile = null;
+        $this->showImportModal = true;
+    }
+
+    public function importDatasources(SpaceTransfer $transfer): void
+    {
+        $this->authorizeDatasourceManagement();
+        $this->validate(['importFile' => ['required', 'file', 'max:10240']]);
+
+        try {
+            $document = json_decode($this->importFile->get(), true, 512, JSON_THROW_ON_ERROR);
+            if (! is_array($document)) {
+                throw new JsonException;
+            }
+            $result = $transfer->importDatasources(Space::findOrFail($this->spaceId), $document);
+        } catch (JsonException $exception) {
+            $this->addError('importFile', 'The selected file is not valid JSON.');
+
+            return;
+        } catch (Throwable $exception) {
+            $this->addError('importFile', $exception->getMessage());
+
+            return;
+        }
+
+        $this->importFile = null;
+        $this->showImportModal = false;
+        $this->selectedDatasourceId = null;
+        $this->dispatch('toast', message: "Imported {$result['datasources']} datasources and {$result['entries']} entries.");
     }
 
     public function render(): View

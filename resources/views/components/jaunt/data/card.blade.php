@@ -36,11 +36,11 @@ $hasBody = isset($body);
 $hasFooter = isset($footer);
 $hasStructure = $hasMedia || $hasHeader || $hasBody || $hasFooter;
 
-$base = 'bg-card outline outline-1 outline-[color:var(--border-subtle)] -outline-offset-1 rounded-xl shadow-sm overflow-hidden '
+$base = 'bg-card outline outline-1 outline-[color:var(--border-subtle)] -outline-offset-1 rounded-xl shadow-sm dark:shadow-sm overflow-hidden '
     . 'transition-[box-shadow,outline-color,transform] duration-fast ease-standard';
 
 $hoverCls = $hoverable || $clickable
-    ? 'hover:shadow-md'
+    ? 'hover:shadow-md dark:hover:shadow-md'
     : '';
 
 $clickableCls = $clickable
