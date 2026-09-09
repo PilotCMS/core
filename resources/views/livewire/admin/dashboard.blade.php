@@ -83,7 +83,7 @@
                                                                     : null;
                                                         @endphp
                                                         @if($activitySubjectRoute)
-                                                            <a href="{{ $activitySubjectRoute }}" wire:navigate class="font-medium text-accent-text hover:underline">{{ $activitySubjectName }}</a>
+                                                            <a href="{{ $activitySubjectRoute }}" wire:navigate class="font-medium text-accent-text hover:text-primary">{{ $activitySubjectName }}</a>
                                                         @else
                                                             <span class="font-medium text-accent-text">{{ $activitySubjectName }}</span>
                                                         @endif

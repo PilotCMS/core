@@ -81,14 +81,14 @@
                                         <strong class="font-semibold">{{ $activity->user?->name ?? 'System' }}</strong>
                                         {{ $activity->action }}
                                         @if($subjectUrl)
-                                            <a href="{{ $subjectUrl }}" wire:navigate class="font-medium text-accent-text hover:underline">{{ $subjectName }}</a>
+                                            <a href="{{ $subjectUrl }}" wire:navigate class="font-medium text-accent-text hover:text-primary">{{ $subjectName }}</a>
                                         @else
                                             <span class="font-medium text-accent-text">{{ $subjectName }}</span>
                                         @endif
                                         @if($contextName)
                                             on
                                             @if($contextUrl)
-                                                <a href="{{ $contextUrl }}" wire:navigate class="font-medium text-accent-text hover:underline">{{ $contextName }}</a>
+                                                <a href="{{ $contextUrl }}" wire:navigate class="font-medium text-accent-text hover:text-primary">{{ $contextName }}</a>
                                             @else
                                                 <span class="font-medium">{{ $contextName }}</span>
                                             @endif

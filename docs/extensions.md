@@ -21,7 +21,7 @@ An extension should be an auto-discovered Composer package with its own Laravel 
     "name": "pilotcms/mcp",
     "require": {
         "php": "^8.4.1",
-        "pilotcms/core": "^0.2.10"
+        "pilotcms/core": "^0.2.11"
     },
     "autoload": {
         "psr-4": {

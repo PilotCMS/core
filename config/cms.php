@@ -1,5 +1,7 @@
 <?php
 
+use Pilot\Core\Support\Cms\LocalAssetImageUrlGenerator;
+
 return [
     'routes' => [
         'admin' => env('PILOT_ADMIN_ROUTES', true),
@@ -12,7 +14,7 @@ return [
     'images' => [
         'driver' => env('PILOT_IMAGE_DRIVER', 'local'),
         'drivers' => [
-            'local' => Pilot\Core\Support\Cms\LocalAssetImageUrlGenerator::class,
+            'local' => LocalAssetImageUrlGenerator::class,
         ],
         'max_width' => (int) env('PILOT_IMAGE_MAX_WIDTH', 4096),
         'max_height' => (int) env('PILOT_IMAGE_MAX_HEIGHT', 4096),

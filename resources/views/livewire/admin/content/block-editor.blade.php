@@ -147,6 +147,7 @@
                 @endphp
                 <div
                     class="space-y-2"
+                    wire:sort="sortRepeaterItem"
                     x-data="{ expandedItem: @js($initialExpandedRepeaterIndex) }"
                     x-on:repeater-expansion-updated.window="
                         if (Number($event.detail.blockId) !== @js((int) $block['id']) || $event.detail.fieldKey !== @js($field['key'])) return;
@@ -165,10 +166,10 @@
                             $itemLabel = is_array($itemLabel) ? ($itemLabel['en'] ?? reset($itemLabel) ?: '') : $itemLabel;
                             $displayTitle = $itemLabel ?: ($field['label'] . ' ' . ($idx + 1));
                         @endphp
-                        <div wire:key="repeater-{{ $field['key'] }}-{{ $idx }}" class="bg-white border border-slate-200 rounded-lg shadow-sm hover:border-blue-300 transition-colors group/item relative overflow-hidden">
+                        <div wire:sort:item="{{ $field['key'] }}::item-{{ $idx }}" wire:key="repeater-{{ $field['key'] }}-{{ $idx }}" class="bg-white border border-slate-200 rounded-lg shadow-sm hover:border-blue-300 transition-colors group/item relative overflow-hidden">
                             @if($idx === 0)<div class="absolute left-0 top-0 bottom-0 w-1 bg-accent"></div>@endif
                             <div class="flex items-center gap-3 p-3">
-                                <x-jaunt.icon name="grip-vertical" size="sm" class="text-slate-300 cursor-move shrink-0" />
+                                <span wire:sort:handle><x-jaunt.icon name="grip-vertical" size="sm" class="text-slate-300 cursor-move shrink-0" /></span>
                                 <button
                                     type="button"
                                     x-on:click="expandedItem = expandedItem === {{ $idx }} ? null : {{ $idx }}"

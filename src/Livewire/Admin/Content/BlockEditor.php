@@ -204,6 +204,41 @@ class BlockEditor extends Component
         $this->dispatch('block-updated', $this->block['id'], $key, $items);
     }
 
+    public function sortRepeaterItem(?string $item, ?int $position): void
+    {
+        if ($item === null || $position === null || ! preg_match('/^(.+)::item-(\d+)$/', $item, $matches)) {
+            return;
+        }
+
+        $key = $matches[1];
+        $index = (int) $matches[2];
+        $field = collect($this->blockType->schema['fields'] ?? [])->firstWhere('key', $key);
+        $items = $this->data[$key] ?? [];
+
+        if (($field['type'] ?? null) !== 'repeater' || ! is_array($items)
+            || ! array_key_exists($index, $items) || $position < 0 || $position >= count($items)) {
+            return;
+        }
+
+        $order = array_keys($items);
+        $moved = array_splice($order, $index, 1);
+        array_splice($order, $position, 0, $moved);
+        $expandedItems = $this->expandedRepeaterItems[$key] ?? [];
+        $this->expandedRepeaterItems[$key] = [];
+        $this->data[$key] = [];
+
+        foreach ($order as $newIndex => $oldIndex) {
+            $this->data[$key][] = $items[$oldIndex];
+
+            if ($expandedItems[$oldIndex] ?? false) {
+                $this->expandedRepeaterItems[$key][$newIndex] = true;
+            }
+        }
+
+        $this->dispatchRepeaterExpansionUpdated($key);
+        $this->dispatch('block-updated', $this->block['id'], $key, $this->data[$key]);
+    }
+
     public function updateRepeaterField(string $key, int $index, string $subKey, $value): void
     {
         $items = $this->data[$key] ?? [];
