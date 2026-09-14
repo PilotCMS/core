@@ -887,6 +887,7 @@
 
     .cms-workspace {
         margin-left: 12px;
+        padding-bottom: 24px;
         position: relative;
         height: auto !important;
         align-self: stretch;
@@ -2629,4 +2630,10 @@ a:focus-visible:not([class*="flux"]) {
     .pilot-toast__close svg {
         @apply size-4;
     }
+}
+
+/* Pilot tables sit flush in cards. Keep header and body gutters aligned,
+   including the outer cells where Flux removes padding by default. */
+.admin-app [data-flux-table] > :is(thead, tbody, tfoot) > tr > :is(th, td) {
+    padding-inline: 1.25rem;
 }
