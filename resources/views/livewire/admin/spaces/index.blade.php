@@ -13,7 +13,7 @@
     <div class="flex flex-1 min-h-0">
     <main id="spaces-list-scroll" class="flex-1 min-w-0 overflow-y-auto">
         <div class="w-full p-6 md:p-8">
-        <flux:card class="overflow-hidden rounded-2xl">
+        <flux:card class="overflow-hidden rounded-2xl !p-0">
             <flux:table>
                 <flux:table.head>
                     <flux:table.row>
