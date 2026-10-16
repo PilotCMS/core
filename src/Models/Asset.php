@@ -150,6 +150,14 @@ class Asset extends Model
 
     public function thumbnailUrl(): string
     {
+        if ($this->getKey() && $this->isImage() && $this->mime !== 'image/svg+xml' && $this->hasConfiguredDisk()) {
+            return $this->imageUrl(640, 480, [
+                'fit' => 'cover',
+                'format' => 'webp',
+                'quality' => 75,
+            ]);
+        }
+
         if (! $this->thumbnail_path || ! $this->hasConfiguredDisk()) {
             return $this->optimizedExternalThumbnailUrl($this->url());
         }
